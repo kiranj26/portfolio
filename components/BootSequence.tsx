@@ -2,273 +2,276 @@
 
 import { useEffect, useRef, useState } from "react"
 
-// ── Billie Jean bassline (square-wave chiptune) ─────────────────────────────
-// BPM ≈ 117  →  16th = 128ms, 8th = 256ms, quarter = 512ms
-// Frequencies: F#2=92.5  A2=110  B2=123.5  C#3=138.6  D3=146.8  F#3=185
+// ── Billie Jean piezo chiptune — 15 seconds ─────────────────────────────────
+// BPM 117 · 16th = 0.128s · 8th = 0.256s · quarter = 0.513s
+// Frequencies: F#2=92.5 A2=110 B2=123.5 C#3=138.6 D3=146.8 F#3=185
 interface Note { f: number; d: number }
-const BILLIE_JEAN: Note[] = [
-  // ── bar 1 ──
-  { f: 92.5,  d: 0.26 }, // F#2  ♩.
-  { f: 0,     d: 0.13 }, // rest
-  { f: 92.5,  d: 0.13 }, // F#2  ♬
-  { f: 110,   d: 0.13 }, // A2
-  { f: 123.5, d: 0.26 }, // B2   ♩
-  { f: 0,     d: 0.13 }, // rest
-  { f: 138.6, d: 0.13 }, // C#3
-  { f: 146.8, d: 0.26 }, // D3   ♩
-  { f: 138.6, d: 0.13 }, // C#3
-  { f: 123.5, d: 0.13 }, // B2
-  { f: 110,   d: 0.26 }, // A2   ♩
-  { f: 92.5,  d: 0.39 }, // F#2  ♩.
-  // ── bar 2 ──
-  { f: 92.5,  d: 0.13 }, // F#2
-  { f: 0,     d: 0.13 }, // rest
-  { f: 92.5,  d: 0.13 }, // F#2
-  { f: 110,   d: 0.13 }, // A2
-  { f: 123.5, d: 0.26 }, // B2
-  { f: 138.6, d: 0.13 }, // C#3
-  { f: 146.8, d: 0.13 }, // D3
-  { f: 185,   d: 0.26 }, // F#3  (octave jump — the hook)
-  { f: 146.8, d: 0.13 }, // D3
-  { f: 138.6, d: 0.13 }, // C#3
-  { f: 123.5, d: 0.13 }, // B2
-  { f: 110,   d: 0.13 }, // A2
-  { f: 92.5,  d: 0.52 }, // F#2  long resolve
+
+const BAR1: Note[] = [
+  { f: 92.5,  d: 0.26 }, { f: 0,     d: 0.13 }, { f: 92.5,  d: 0.13 },
+  { f: 110,   d: 0.13 }, { f: 123.5, d: 0.26 }, { f: 0,     d: 0.13 },
+  { f: 138.6, d: 0.13 }, { f: 146.8, d: 0.26 }, { f: 138.6, d: 0.13 },
+  { f: 123.5, d: 0.13 }, { f: 110,   d: 0.26 }, { f: 92.5,  d: 0.39 },
+]
+const BAR2: Note[] = [
+  { f: 92.5,  d: 0.13 }, { f: 0,     d: 0.13 }, { f: 92.5,  d: 0.13 },
+  { f: 110,   d: 0.13 }, { f: 123.5, d: 0.26 }, { f: 138.6, d: 0.13 },
+  { f: 146.8, d: 0.13 }, { f: 185,   d: 0.26 }, { f: 146.8, d: 0.13 },
+  { f: 138.6, d: 0.13 }, { f: 123.5, d: 0.13 }, { f: 110,   d: 0.13 },
+  { f: 92.5,  d: 0.52 },
+]
+// 7 bars ≈ 15.01 seconds
+const BILLIE_15S: Note[] = [
+  ...BAR1, ...BAR2, ...BAR1, ...BAR2, ...BAR1, ...BAR2, ...BAR1,
 ]
 
-function playBillieJean(onDone: () => void): void {
+function playBillieJean(onDone: () => void): () => void {
+  let stopped = false
   try {
-    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const AC = window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     const ctx = new AC()
-    let t = ctx.currentTime + 0.08
 
-    BILLIE_JEAN.forEach(({ f, d }) => {
-      if (f > 0) {
+    // ── piezo bassline ──
+    let t = ctx.currentTime + 0.05
+    BILLIE_15S.forEach(({ f, d }) => {
+      if (f > 0 && !stopped) {
         const osc  = ctx.createOscillator()
         const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
+        osc.connect(gain); gain.connect(ctx.destination)
         osc.type = "square"
         osc.frequency.value = f
         gain.gain.setValueAtTime(0, t)
-        gain.gain.linearRampToValueAtTime(0.13, t + 0.01)
-        gain.gain.setValueAtTime(0.13, t + d - 0.04)
+        gain.gain.linearRampToValueAtTime(0.11, t + 0.008)
+        gain.gain.setValueAtTime(0.11, t + d - 0.03)
         gain.gain.linearRampToValueAtTime(0, t + d)
-        osc.start(t)
-        osc.stop(t + d + 0.01)
+        osc.start(t); osc.stop(t + d + 0.01)
       }
       t += d
     })
 
-    const totalMs = BILLIE_JEAN.reduce((s, n) => s + n.d, 0) * 1000
-    setTimeout(() => {
-      ctx.close()
-      onDone()
-    }, totalMs + 500)
+    // ── kick drum (sine drop, beats 1 & 3) ──
+    const quarterNote = 0.513
+    const totalBeats  = Math.floor(15 / quarterNote)
+    for (let b = 0; b < totalBeats; b += 2) {
+      const bt = ctx.currentTime + 0.05 + b * quarterNote
+      const osc  = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = "sine"
+      osc.frequency.setValueAtTime(110, bt)
+      osc.frequency.exponentialRampToValueAtTime(40, bt + 0.12)
+      gain.gain.setValueAtTime(0.18, bt)
+      gain.gain.exponentialRampToValueAtTime(0.001, bt + 0.15)
+      osc.start(bt); osc.stop(bt + 0.16)
+    }
+
+    // ── hi-hat (filtered noise, every 16th) ──
+    const sixteenth = 0.128
+    const hatCount  = Math.floor(15 / sixteenth)
+    for (let h = 0; h < hatCount; h++) {
+      const ht = ctx.currentTime + 0.05 + h * sixteenth
+      const bufSize = ctx.sampleRate * 0.04
+      const buffer  = ctx.createBuffer(1, bufSize, ctx.sampleRate)
+      const data    = buffer.getChannelData(0)
+      for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1
+      const src    = ctx.createBufferSource()
+      const filter = ctx.createBiquadFilter()
+      const gain   = ctx.createGain()
+      src.buffer = buffer
+      filter.type = "highpass"; filter.frequency.value = 8000
+      src.connect(filter); filter.connect(gain); gain.connect(ctx.destination)
+      gain.gain.setValueAtTime(0.04, ht)
+      gain.gain.exponentialRampToValueAtTime(0.001, ht + 0.04)
+      src.start(ht); src.stop(ht + 0.04)
+    }
+
+    const id = setTimeout(() => { ctx.close(); onDone() }, 15200)
+    return () => { stopped = true; clearTimeout(id); ctx.close() }
   } catch {
-    setTimeout(onDone, 6000)
+    const id = setTimeout(onDone, 15000)
+    return () => clearTimeout(id)
   }
 }
 
-// ── channel waveform data ────────────────────────────────────────────────────
-const CHANNELS = [
-  { id: "D0", label: "GPIO_BOOT",  color: "#06b6d4", pattern: "trigger" },
-  { id: "D1", label: "SPI_CLK",   color: "#a78bfa", pattern: "clock"   },
-  { id: "D2", label: "SPI_MOSI",  color: "#fb923c", pattern: "data"    },
-  { id: "D3", label: "UART_TX",   color: "#4ade80", pattern: "uart"    },
-  { id: "A0", label: "PWM_OUT",   color: "#f472b6", pattern: "analog"  },
+function playOhShitAlarm(): void {
+  // Buzzer alarm burst first
+  try {
+    const AC = window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const ctx = new AC()
+    ;[0, 0.18, 0.36].forEach((delay) => {
+      const osc  = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = "square"; osc.frequency.value = 880
+      gain.gain.setValueAtTime(0, ctx.currentTime + delay)
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + delay + 0.01)
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + 0.14)
+      osc.start(ctx.currentTime + delay)
+      osc.stop(ctx.currentTime + delay + 0.15)
+    })
+    setTimeout(() => ctx.close(), 800)
+  } catch { /* skip */ }
+
+  // Web Speech API — the pièce de résistance
+  try {
+    if ("speechSynthesis" in window) {
+      const u = new SpeechSynthesisUtterance("oh shit")
+      u.rate  = 0.75
+      u.pitch = 0.3
+      u.volume = 0.9
+      window.speechSynthesis.speak(u)
+    }
+  } catch { /* skip */ }
+}
+
+// ── crash log lines ──────────────────────────────────────────────────────────
+const CRASH_LINES = [
+  { text: "[    0.000] *** KERNEL PANIC — not syncing: fatal exception ***", color: "#ef4444" },
+  { text: "[    0.001] CPU: ARM Cortex-M4F  Rev: r0p1  Clock: 180MHz",       color: "#fbbf24" },
+  { text: "[    0.001] HFSR: 0xC0000000  CFSR: 0x00000002 (INVSTATE)",       color: "#fbbf24" },
+  { text: "[    0.002] PC : 0x08012A3C   LR : 0x08009F18",                   color: "#86efac" },
+  { text: "[    0.002] SP : 0x20007F40   PSP: 0x200079C0",                   color: "#86efac" },
+  { text: "[    0.003] R0 : 0xDEADBEEF  R1 : 0x00000000",                   color: "#86efac" },
+  { text: "[    0.003] R2 : 0xCAFEBABE  R3 : 0x08012A3C",                   color: "#86efac" },
+  { text: "[    0.004] R12: 0x00000001  xPSR: 0x61000000",                  color: "#86efac" },
+  { text: "[    0.004] Fault: INVSTATE — tried to exec at 0xDEADC0DE",       color: "#fbbf24" },
+  { text: "[    0.005] Last UART: 0x4B 0x4A 0x20 → \"KJ\"  115200 8N1",      color: "#86efac" },
+  { text: "[    0.005] Last CAN: ID=0x7FF DLC=8 DATA=DE AD BE EF 00 01 02 03", color: "#86efac" },
+  { text: "[    0.006] Stack trace:",                                         color: "#a1a1aa" },
+  { text: "[    0.006]   #0  portfolio_init+0x3C  <0x08012A3C>",             color: "#a1a1aa" },
+  { text: "[    0.006]   #1  vTaskStartScheduler+0x18  <0x08009F18>",        color: "#a1a1aa" },
+  { text: "[    0.007]   #2  main+0x4  <0x0800BEEF>",                        color: "#a1a1aa" },
+  { text: "",                                                                  color: "#a1a1aa" },
+  { text: "┌─────────────────────────────────┐",                              color: "#ef4444" },
+  { text: "│       *** OH  SHIT ***          │",                              color: "#ef4444" },
+  { text: "└─────────────────────────────────┘",                              color: "#ef4444" },
+  { text: "",                                                                  color: "#a1a1aa" },
 ]
 
-function DigitalWave({
-  pattern, color, active, width,
-}: {
-  pattern: string; color: string; active: boolean; width: number
-}): React.ReactElement {
-  const H = 28
-  const segments = Math.floor(width / 10)
+interface FirmwareCrashProps { onComplete: () => void }
 
-  const getPath = (): string => {
-    if (!active) return `M 0 ${H / 2} L ${width} ${H / 2}`
-    if (pattern === "trigger") {
-      return `M 0 ${H} L 30 ${H} L 30 2 L 60 2 L 60 ${H} L ${width} ${H}`
-    }
-    if (pattern === "clock") {
-      let d = `M 0 ${H}`
-      for (let i = 0; i < segments; i++) {
-        const x = i * 10
-        d += ` L ${x} ${i % 2 === 0 ? H : 2} L ${x + 5} ${i % 2 === 0 ? H : 2} L ${x + 5} ${i % 2 === 0 ? 2 : H}`
-      }
-      return d
-    }
-    if (pattern === "data") {
-      const bits = [1,0,1,1,0,1,0,0,1,1,0,1,0,1,1,0,0,1,0,1]
-      let d = `M 0 ${H}`
-      bits.forEach((b, i) => {
-        const x = i * (width / bits.length)
-        const nx = (i + 1) * (width / bits.length)
-        const y = b ? 2 : H
-        d += ` L ${x} ${y} L ${nx} ${y}`
-      })
-      return d
-    }
-    if (pattern === "uart") {
-      // start bit + 8 data bits (0x4B = "K") + stop
-      const bits = [0,1,1,0,1,0,0,1,0,1]
-      let d = `M 0 ${H}`
-      const bw = width / (bits.length + 2)
-      d += ` L ${bw} ${H}`
-      bits.forEach((b, i) => {
-        d += ` L ${(i + 1) * bw} ${b ? 2 : H} L ${(i + 2) * bw} ${b ? 2 : H}`
-      })
-      d += ` L ${width} ${H}`
-      return d
-    }
-    return `M 0 ${H / 2} L ${width} ${H / 2}`
-  }
+export function BootSequence({ onComplete }: FirmwareCrashProps): React.ReactElement {
+  const [lines, setLines]         = useState<typeof CRASH_LINES>([])
+  const [reboot, setReboot]       = useState<number | null>(null)
+  const [flashRed, setFlashRed]   = useState(false)
+  const [opacity, setOpacity]     = useState(0)
+  const [ohShitFlash, setOhShitFlash] = useState(false)
+  const stopMusic = useRef<(() => void) | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-  return (
-    <svg width={width} height={H} className="overflow-visible">
-      {pattern === "analog" && active ? (
-        <path
-          d={`M 0 ${H / 2} ${Array.from({ length: Math.floor(width / 6) }, (_, i) => {
-            const x = i * 6
-            const amp = 10
-            return `L ${x} ${H / 2 + (i % 4 < 2 ? -amp : amp)}`
-          }).join(" ")}`}
-          stroke={color} strokeWidth="1.5" fill="none" opacity={0.85}
-          style={{ animation: active ? "pwm-scroll 0.4s linear infinite" : "none" }}
-        />
-      ) : (
-        <path
-          d={getPath()}
-          stroke={color} strokeWidth="1.5" fill="none" opacity={active ? 0.85 : 0.18}
-        />
-      )}
-    </svg>
-  )
-}
-
-interface SignalAnalyzerProps {
-  onComplete: () => void
-}
-
-export function BootSequence({ onComplete }: SignalAnalyzerProps): React.ReactElement {
-  const [activeCount, setActiveCount] = useState(0)
-  const [showDecode, setShowDecode] = useState(false)
-  const [opacity, setOpacity] = useState(0)
-  const [triggerMs, setTriggerMs] = useState<string>("0.000")
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const [wrapW, setWrapW] = useState(520)
-
-  // Fade in
+  // Fade in + red flash
   useEffect(() => {
-    setTimeout(() => setOpacity(1), 30)
+    setFlashRed(true)
+    setTimeout(() => setFlashRed(false), 400)
+    setTimeout(() => setOpacity(1), 40)
   }, [])
 
-  // Measure available width
-  useEffect(() => {
-    if (wrapRef.current) setWrapW(wrapRef.current.clientWidth - 120)
-  }, [])
+  // "Oh shit" alarm fires immediately
+  useEffect(() => { playOhShitAlarm() }, [])
 
-  // Cascade channels active, then play music
+  // Start music after 0.6s, schedule reboot countdown at 12s
   useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = []
-    CHANNELS.forEach((_, i) => {
-      timers.push(setTimeout(() => setActiveCount(i + 1), 200 + i * 280))
-    })
-    timers.push(setTimeout(() => setShowDecode(true), 200 + CHANNELS.length * 280 + 200))
-
-    // Start music after all channels lit
-    const musicDelay = 200 + CHANNELS.length * 280 + 600
-    timers.push(setTimeout(() => {
-      playBillieJean(() => {
-        setOpacity(0)
-        setTimeout(onComplete, 500)
+    const t1 = setTimeout(() => {
+      stopMusic.current = playBillieJean(() => {
+        setReboot(3)
       })
-      // Live timer
-      const start = Date.now()
-      const ticker = setInterval(() => {
-        setTriggerMs(((Date.now() - start) / 1000).toFixed(3))
-      }, 16)
-      timers.push(ticker as unknown as ReturnType<typeof setTimeout>)
-    }, musicDelay))
+    }, 600)
 
-    return () => timers.forEach(clearTimeout)
+    // Reboot countdown at 12s
+    const t2 = setTimeout(() => setReboot(3), 12000)
+
+    return () => { clearTimeout(t1); clearTimeout(t2) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Reboot countdown ticks
+  useEffect(() => {
+    if (reboot === null) return
+    if (reboot === 0) {
+      setOpacity(0)
+      stopMusic.current?.()
+      setTimeout(onComplete, 500)
+      return
+    }
+    const id = setTimeout(() => setReboot(r => (r ?? 1) - 1), 1000)
+    return () => clearTimeout(id)
+  }, [reboot, onComplete])
+
+  // Typewriter crash lines
+  useEffect(() => {
+    let idx = 0
+    const tick = (): void => {
+      if (idx >= CRASH_LINES.length) {
+        // Flash the OH SHIT box
+        setOhShitFlash(true)
+        setTimeout(() => setOhShitFlash(false), 200)
+        setTimeout(() => { setOhShitFlash(true); setTimeout(() => setOhShitFlash(false), 200) }, 500)
+        return
+      }
+      setLines(prev => [...prev, CRASH_LINES[idx]])
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      idx++
+      setTimeout(tick, idx < 10 ? 90 : 120)
+    }
+    setTimeout(tick, 200)
   }, [])
 
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4"
       style={{
-        background: "rgba(0,0,0,0.94)",
+        background: flashRed ? "rgba(80,0,0,0.97)" : "rgba(0,0,0,0.96)",
         opacity,
-        transition: "opacity 0.45s ease",
+        transition: flashRed ? "background 0.05s" : "opacity 0.45s ease, background 0.4s ease",
       }}
-      onClick={() => { setOpacity(0); setTimeout(onComplete, 500) }}
+      onClick={() => { stopMusic.current?.(); setOpacity(0); setTimeout(onComplete, 500) }}
     >
-      <style>{`
-        @keyframes pwm-scroll { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -24; } }
-      `}</style>
-
       <div
-        className="w-full max-w-2xl rounded-lg border border-zinc-700 overflow-hidden"
+        className="w-full max-w-2xl rounded border overflow-hidden"
+        style={{ borderColor: ohShitFlash ? "#ef4444" : "#3f3f46" }}
         onClick={e => e.stopPropagation()}
       >
-        {/* ── Toolbar ── */}
-        <div className="bg-zinc-900 border-b border-zinc-700 px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500/70"/>
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70"/>
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500/70"/>
-            </div>
-            <span className="font-mono text-xs text-zinc-400">Logic Analyzer — KJ-Probe v2.1</span>
+        {/* Chrome bar */}
+        <div className="bg-zinc-900 border-b border-zinc-700 px-4 py-2 flex items-center gap-3">
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500"/>
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/40"/>
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500/40"/>
           </div>
-          <div className="flex items-center gap-4 font-mono text-[10px] text-zinc-500">
-            <span>5 CH · 24MHz · 8-bit</span>
-            <span className="text-cyan-500">▶ TRIGGERED</span>
-            <span>{triggerMs}s</span>
-          </div>
+          <span className="font-mono text-xs text-red-400">⚠ HARD FAULT EXCEPTION — ARM Cortex-M4F</span>
+          <span className="ml-auto font-mono text-[10px] text-zinc-600">HFSR 0xC0000000</span>
         </div>
 
-        {/* ── Channels ── */}
-        <div ref={wrapRef} className="bg-zinc-950 divide-y divide-zinc-800/60">
-          {CHANNELS.map((ch, i) => (
-            <div key={ch.id} className="flex items-center h-12">
-              {/* Label col */}
-              <div className="w-28 shrink-0 px-3 border-r border-zinc-800">
-                <p className="font-mono text-[10px]" style={{ color: ch.color }}>{ch.id}</p>
-                <p className="font-mono text-[9px] text-zinc-600">{ch.label}</p>
-              </div>
-              {/* Waveform col */}
-              <div className="flex-1 px-2 flex items-center overflow-hidden">
-                <DigitalWave
-                  pattern={ch.pattern}
-                  color={ch.color}
-                  active={i < activeCount}
-                  width={Math.max(wrapW, 300)}
-                />
-              </div>
+        {/* Crash log */}
+        <div
+          ref={scrollRef}
+          className="bg-black p-4 h-72 overflow-y-auto"
+        >
+          {lines.map((line, i) => (
+            <div
+              key={i}
+              className="font-mono text-xs leading-5 whitespace-pre"
+              style={{ color: line.color }}
+            >
+              {line.text}
             </div>
           ))}
+
+          {/* Reboot countdown */}
+          {reboot !== null && reboot > 0 && (
+            <div className="font-mono text-xs text-yellow-400 mt-2 animate-pulse">
+              Rebooting in {reboot}...
+            </div>
+          )}
         </div>
 
-        {/* ── UART decode annotation ── */}
-        <div
-          className="bg-zinc-900/80 border-t border-zinc-800 px-4 py-2.5 flex items-center gap-4 font-mono text-[10px]"
-          style={{ opacity: showDecode ? 1 : 0, transition: "opacity 0.4s ease" }}
-        >
-          <span className="text-zinc-500">UART decode  115200 8N1</span>
-          <span className="text-green-400">0x4B  0x4A  0x20  →</span>
-          <span className="text-cyan-400 font-bold tracking-widest">"KJ"</span>
-          <span className="ml-auto text-zinc-600">♩ Billie Jean · MJ · 117 BPM</span>
-        </div>
-
-        {/* ── Status bar ── */}
-        <div className="bg-zinc-900 border-t border-zinc-700 px-4 py-1.5 flex items-center justify-between font-mono text-[9px] text-zinc-600">
-          <span>Sample rate: 24 MSPS · Buffer: 512K · Trigger: rising edge D0</span>
-          <span className="text-zinc-700">click anywhere to dismiss</span>
+        {/* Status bar */}
+        <div className="bg-zinc-900 border-t border-zinc-700 px-4 py-1.5 flex items-center justify-between font-mono text-[9px]">
+          <span className="text-red-500">● FAULT ACTIVE</span>
+          <span className="text-zinc-600">♩ Billie Jean — MJ — piezo buzzer</span>
+          <span className="text-zinc-700">click to dismiss</span>
         </div>
       </div>
     </div>
