@@ -1,11 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { ArrowDown } from "lucide-react"
 import { MorphingText } from "@/components/ui/morphing-text"
 import { BlurFade } from "@/components/ui/blur-fade"
 import { Particles } from "@/components/ui/particles"
-import { FlickeringGrid } from "@/components/ui/flickering-grid"
+import { PcbBackground } from "@/components/ui/pcb-background"
+import { TactileButton } from "@/components/TactileButton"
+import { BootSequence } from "@/components/BootSequence"
 
 const DOMAIN_WORDS = ["automotive", "ev charging", "industrial", "rtos", "bare metal"]
 
@@ -18,73 +21,69 @@ function GithubIcon({ className }: { className?: string }): React.ReactElement {
 }
 
 export function HeroSection(): React.ReactElement {
+  const [booting, setBooting] = useState(false)
+  const [booted, setBooted] = useState(false)
+
+  const handleBoot = (): void => {
+    if (booting || booted) return
+    setBooting(true)
+  }
+
+  const handleBootComplete = (): void => {
+    setBooting(false)
+    setBooted(true)
+  }
+
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 overflow-hidden bg-zinc-950">
+    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 overflow-hidden">
 
-      {/* Layer 1 — FlickeringGrid: very faint, full coverage */}
-      <div className="absolute inset-0 opacity-[0.06]">
-        <FlickeringGrid
-          color="#06b6d4"
-          squareSize={3}
-          gridGap={8}
-          flickerChance={0.08}
-          maxOpacity={0.6}
-          className="w-full h-full"
-        />
-      </div>
+      {/* Layer 1 — PCB FR4 substrate + routed traces */}
+      <PcbBackground />
 
-      {/* Layer 2 — Dot grid: PCB-style static dots */}
-      <div
-        className="absolute inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage: "radial-gradient(circle, #06b6d4 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-
-      {/* Layer 3 — Noise texture via SVG filter */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.04]" aria-hidden="true">
-        <filter id="noise">
-          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
+      {/* Layer 2 — Noise texture */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.035]" aria-hidden="true">
+        <filter id="pcb-noise">
+          <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" stitchTiles="stitch"/>
+          <feColorMatrix type="saturate" values="0"/>
         </filter>
-        <rect width="100%" height="100%" filter="url(#noise)" />
+        <rect width="100%" height="100%" filter="url(#pcb-noise)"/>
       </svg>
 
-      {/* Layer 4 — Radial cyan glow behind the headline */}
+      {/* Layer 3 — Radial glow centering on headline */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 60% 40% at 50% 45%, rgba(6,182,212,0.08) 0%, rgba(6,182,212,0.03) 40%, transparent 70%)",
+            "radial-gradient(ellipse 55% 38% at 50% 42%, rgba(6,182,212,0.07) 0%, rgba(6,182,212,0.02) 45%, transparent 70%)",
         }}
       />
 
-      {/* Layer 5 — Particles: mouse-interactive signal traces */}
+      {/* Layer 4 — Particles (solder flux / signal traces floating) */}
       <Particles
         className="absolute inset-0"
-        quantity={90}
+        quantity={60}
         color="#06b6d4"
-        size={0.5}
-        staticity={60}
-        ease={60}
-        vx={0.05}
+        size={0.45}
+        staticity={65}
+        ease={65}
+        vx={0.04}
         vy={0}
       />
 
-      {/* Edge vignette to keep text readable */}
+      {/* Layer 5 — Vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 100% 100% at 50% 50%, transparent 50%, rgba(9,9,11,0.7) 100%)",
+            "radial-gradient(ellipse 90% 90% at 50% 50%, transparent 40%, rgba(3,13,7,0.75) 100%)",
         }}
       />
 
-      {/* Content */}
+      {/* ── HERO CONTENT ─────────────────────────────────── */}
       <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
+
         <BlurFade delay={0} inView>
-          <p className="font-mono text-cyan-400 text-sm tracking-widest uppercase mb-4">
+          <p className="font-mono text-cyan-500 text-xs tracking-widest uppercase mb-4">
             firmware engineer · eaton · peachtree city, ga
           </p>
         </BlurFade>
@@ -96,16 +95,17 @@ export function HeroSection(): React.ReactElement {
         </BlurFade>
 
         <BlurFade delay={0.2} inView>
-          <p className="font-sans text-zinc-300 text-lg sm:text-xl max-w-2xl mx-auto mb-2 leading-relaxed">
+          <p className="font-sans text-zinc-300 text-base sm:text-lg max-w-2xl mx-auto mb-2 leading-relaxed">
             Production firmware on{" "}
-            <span className="text-cyan-400 font-semibold">10+ silicon families</span> across
-            automotive (ISO&nbsp;26262&nbsp;ASIL-D), EV charging (OCPP&nbsp;1.6),
-            industrial DSP, and space — from bare metal bring-up to shipped product.
+            <span className="text-cyan-400 font-semibold">10+ silicon families</span>{" "}
+            across automotive (ISO&nbsp;26262&nbsp;ASIL-D), EV charging (OCPP&nbsp;1.6),
+            industrial DSP, and space —<br className="hidden sm:block" />
+            from bare metal bring-up to shipped product.
           </p>
         </BlurFade>
 
         <BlurFade delay={0.3} inView>
-          <div className="mb-10 mt-6">
+          <div className="mb-8 mt-6">
             <MorphingText
               texts={DOMAIN_WORDS}
               className="text-cyan-400 font-mono text-3xl sm:text-4xl md:text-5xl h-14 md:h-16"
@@ -113,8 +113,9 @@ export function HeroSection(): React.ReactElement {
           </div>
         </BlurFade>
 
-        <BlurFade delay={0.45} inView>
-          <div className="flex flex-wrap items-center justify-center gap-4">
+        {/* CTA buttons */}
+        <BlurFade delay={0.42} inView>
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
             <Link
               href="#projects"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-semibold text-sm transition-colors"
@@ -133,11 +134,32 @@ export function HeroSection(): React.ReactElement {
             </a>
           </div>
         </BlurFade>
+
+        {/* ── TACTILE BUTTON — centrepiece ─────────── */}
+        <BlurFade delay={0.55} inView>
+          <div className="flex flex-col items-center gap-2">
+            {/* PCB-style trace decoration around the button */}
+            <div className="flex items-center gap-4">
+              <div className="h-px w-16 bg-gradient-to-r from-transparent to-cyan-800/50"/>
+              <TactileButton onPress={handleBoot} disabled={booting || booted} />
+              <div className="h-px w-16 bg-gradient-to-l from-transparent to-cyan-800/50"/>
+            </div>
+            {booted && (
+              <p className="font-mono text-xs text-green-500 mt-1 animate-pulse">
+                ✓ system initialized
+              </p>
+            )}
+          </div>
+        </BlurFade>
       </div>
 
+      {/* Scroll cue */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <ArrowDown className="w-5 h-5 text-zinc-600" />
+        <ArrowDown className="w-5 h-5 text-zinc-700" />
       </div>
+
+      {/* Boot sequence overlay */}
+      {booting && <BootSequence onComplete={handleBootComplete} />}
     </section>
   )
 }
