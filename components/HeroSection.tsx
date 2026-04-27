@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 import Link from "next/link"
 import { ArrowDown } from "lucide-react"
 import { MorphingText }   from "@/components/ui/morphing-text"
@@ -11,12 +11,6 @@ import { BootSequence }   from "@/components/BootSequence"
 
 const DOMAIN_WORDS = ["automotive", "ev charging", "industrial", "rtos", "bare metal"]
 
-// Konami: ↑↑↓↓←→←→BA
-const KONAMI = [
-  "ArrowUp","ArrowUp","ArrowDown","ArrowDown",
-  "ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a",
-]
-
 function GithubIcon({ className }: { className?: string }): React.ReactElement {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -25,52 +19,105 @@ function GithubIcon({ className }: { className?: string }): React.ReactElement {
   )
 }
 
+function EStopButton({ onPress, disabled }: { onPress: () => void; disabled: boolean }): React.ReactElement {
+  const [pressed, setPressed] = useState(false)
+
+  const handlePress = (): void => {
+    if (disabled) return
+    setPressed(true)
+    setTimeout(() => setPressed(false), 200)
+    onPress()
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-2 select-none">
+      {/* Warning label */}
+      <div className="flex items-center gap-1.5 font-mono text-xs text-red-500 tracking-widest uppercase animate-pulse">
+        <span>⚠</span>
+        <span>do not press</span>
+        <span>⚠</span>
+      </div>
+
+      {/* E-STOP outer housing */}
+      <div
+        className="relative cursor-pointer"
+        style={{
+          width: 110,
+          height: 110,
+          borderRadius: "50%",
+          background: "linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)",
+          border: "3px solid #3a3a3a",
+          boxShadow: pressed
+            ? "0 2px 4px rgba(0,0,0,0.9), inset 0 2px 6px rgba(0,0,0,0.7)"
+            : `0 8px 0 #0a0a0a, 0 12px 20px rgba(0,0,0,0.8),
+               0 0 30px rgba(239,68,68,0.35), 0 0 60px rgba(239,68,68,0.15),
+               inset 0 2px 0 rgba(255,255,255,0.06)`,
+          transform: pressed ? "translateY(7px)" : "translateY(0px)",
+          transition: "transform 80ms ease, box-shadow 80ms ease",
+        }}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
+        role="button"
+        tabIndex={0}
+        aria-label="Flash firmware button"
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handlePress() }}
+      >
+        {/* Pulsing glow ring */}
+        <div
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{
+            animation: "estop-pulse 2s ease-in-out infinite",
+            borderRadius: "50%",
+          }}
+        />
+
+        {/* Red cap */}
+        <div
+          className="absolute inset-0 m-2 rounded-full flex flex-col items-center justify-center"
+          style={{
+            background: pressed
+              ? "radial-gradient(circle at 40% 35%, #b91c1c 0%, #7f1d1d 100%)"
+              : "radial-gradient(circle at 40% 35%, #ef4444 0%, #b91c1c 60%, #991b1b 100%)",
+            boxShadow: pressed
+              ? "inset 0 4px 8px rgba(0,0,0,0.6)"
+              : "0 3px 0 rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,120,120,0.4)",
+            transition: "background 80ms ease, box-shadow 80ms ease",
+          }}
+        >
+          <span className="font-mono text-white font-bold text-[10px] tracking-widest leading-tight text-center">
+            FLASH<br/>FW
+          </span>
+        </div>
+      </div>
+
+      {/* CTA below */}
+      <p className="font-mono text-[11px] text-zinc-500 tracking-wide">
+        → press to load firmware
+      </p>
+
+      <style>{`
+        @keyframes estop-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
+          50%       { box-shadow: 0 0 0 12px rgba(239,68,68,0.0); }
+        }
+        @keyframes estop-ring {
+          0%   { box-shadow: 0 0 20px 4px rgba(239,68,68,0.5); }
+          50%  { box-shadow: 0 0 36px 8px rgba(239,68,68,0.2); }
+          100% { box-shadow: 0 0 20px 4px rgba(239,68,68,0.5); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 export function HeroSection(): React.ReactElement {
   const [crashing, setCrashing] = useState(false)
   const [crashed,  setCrashed]  = useState(false)
-  const konamiRef = useRef<string[]>([])
-  // Long-press IC state
-  const holdTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [holdPct, setHoldPct] = useState(0)
-  const holdInterval = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const triggerCrash = useCallback((): void => {
     if (crashing || crashed) return
     setCrashing(true)
   }, [crashing, crashed])
-
-  // ── Trigger 2: Konami code ─────────────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent): void => {
-      konamiRef.current = [...konamiRef.current, e.key].slice(-KONAMI.length)
-      if (konamiRef.current.join(",") === KONAMI.join(",")) {
-        konamiRef.current = []
-        triggerCrash()
-      }
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [triggerCrash])
-
-  // ── Trigger 3: Long-press STM32 IC ────────────────────────────────────────
-  const startHold = (): void => {
-    if (crashing || crashed) return
-    let pct = 0
-    holdInterval.current = setInterval(() => {
-      pct += 100 / 15   // 1.5s = 15 × 100ms
-      setHoldPct(Math.min(pct, 100))
-      if (pct >= 100) {
-        clearInterval(holdInterval.current!)
-        holdInterval.current = null
-        setHoldPct(0)
-        triggerCrash()
-      }
-    }, 100)
-  }
-  const cancelHold = (): void => {
-    if (holdInterval.current) { clearInterval(holdInterval.current); holdInterval.current = null }
-    setHoldPct(0)
-  }
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 overflow-hidden">
@@ -100,52 +147,6 @@ export function HeroSection(): React.ReactElement {
         background: "radial-gradient(ellipse 90% 90% at 50% 50%, transparent 40%, rgba(3,13,7,0.75) 100%)",
       }}/>
 
-      {/* ── TRIGGER 1: LED hotspot (click the blinking LED D1) ─────────── */}
-      <div
-        className="absolute"
-        style={{ left: "48.5%", top: "19.5%", width: "3%", height: "5%", transform: "translate(-50%,-50%)" }}
-        title="Click to probe D1"
-      >
-        <div
-          className="w-full h-full rounded-full cursor-crosshair"
-          onClick={triggerCrash}
-          style={{ background: "transparent" }}
-        />
-      </div>
-
-      {/* ── TRIGGER 3: STM32 IC long-press hotspot ──────────────────────── */}
-      <div
-        className="absolute flex items-center justify-center"
-        style={{ left: "29.5%", top: "46%", width: "10.5%", height: "19%", transform: "translate(-50%,-50%)" }}
-      >
-        <div
-          className="w-full h-full cursor-cell relative"
-          onMouseDown={startHold}
-          onMouseUp={cancelHold}
-          onMouseLeave={cancelHold}
-          onTouchStart={startHold}
-          onTouchEnd={cancelHold}
-          title="Hold to trigger HardFault"
-        >
-          {/* Hold progress ring */}
-          {holdPct > 0 && (
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(239,68,68,0.25)" strokeWidth="4"/>
-              <circle cx="50" cy="50" r="46" fill="none"
-                stroke="rgba(239,68,68,0.8)" strokeWidth="4"
-                strokeDasharray={`${holdPct * 2.89} 999`}
-                strokeLinecap="round"
-                transform="rotate(-90 50 50)"
-              />
-              <text x="50" y="55" textAnchor="middle" fill="rgba(239,68,68,0.9)"
-                fontSize="18" fontFamily="monospace" fontWeight="bold">
-                {Math.floor(holdPct)}%
-              </text>
-            </svg>
-          )}
-        </div>
-      </div>
-
       {/* ── HERO CONTENT ─────────────────────────────────────────────────── */}
       <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
 
@@ -172,7 +173,7 @@ export function HeroSection(): React.ReactElement {
         </BlurFade>
 
         <BlurFade delay={0.3} inView>
-          <div className="mb-8 mt-6">
+          <div className="mb-6 mt-6">
             <MorphingText
               texts={DOMAIN_WORDS}
               className="text-cyan-400 font-mono text-3xl sm:text-4xl md:text-5xl h-14 md:h-16"
@@ -181,7 +182,7 @@ export function HeroSection(): React.ReactElement {
         </BlurFade>
 
         <BlurFade delay={0.42} inView>
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-6">
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
             <Link
               href="#projects"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-semibold text-sm transition-colors"
@@ -201,20 +202,16 @@ export function HeroSection(): React.ReactElement {
           </div>
         </BlurFade>
 
-        {/* Hint strip */}
+        {/* E-STOP firmware button */}
         <BlurFade delay={0.55} inView>
-          <div className="flex items-center justify-center gap-6 font-mono text-[10px] text-zinc-700">
-            <span title="Click the blinking LED on the PCB">⊕ probe D1 LED</span>
-            <span className="text-zinc-800">·</span>
-            <span title="Hold the STM32 IC">⏳ hold U1 (STM32)</span>
-            <span className="text-zinc-800">·</span>
-            <span title="Konami code">↑↑↓↓←→←→BA</span>
+          <div className="flex flex-col items-center gap-2">
+            <EStopButton onPress={triggerCrash} disabled={crashing || crashed} />
+            {crashed && (
+              <p className="font-mono text-xs text-green-500 mt-2 animate-pulse">
+                ✓ firmware v2.1 rebooted successfully
+              </p>
+            )}
           </div>
-          {crashed && (
-            <p className="font-mono text-xs text-green-500 mt-3 animate-pulse">
-              ✓ portfolio rebooted successfully
-            </p>
-          )}
         </BlurFade>
       </div>
 

@@ -2,131 +2,33 @@
 
 import { useEffect, useRef, useState } from "react"
 
-// ── Billie Jean piezo chiptune — 15 seconds ─────────────────────────────────
-// BPM 117 · 16th = 0.128s · 8th = 0.256s · quarter = 0.513s
-// Frequencies: F#2=92.5 A2=110 B2=123.5 C#3=138.6 D3=146.8 F#3=185
-interface Note { f: number; d: number }
+// ── Types ────────────────────────────────────────────────────────────────────
+type Phase = "loading" | "crashing" | "dumping" | "rebooting"
 
-const BAR1: Note[] = [
-  { f: 92.5,  d: 0.26 }, { f: 0,     d: 0.13 }, { f: 92.5,  d: 0.13 },
-  { f: 110,   d: 0.13 }, { f: 123.5, d: 0.26 }, { f: 0,     d: 0.13 },
-  { f: 138.6, d: 0.13 }, { f: 146.8, d: 0.26 }, { f: 138.6, d: 0.13 },
-  { f: 123.5, d: 0.13 }, { f: 110,   d: 0.26 }, { f: 92.5,  d: 0.39 },
-]
-const BAR2: Note[] = [
-  { f: 92.5,  d: 0.13 }, { f: 0,     d: 0.13 }, { f: 92.5,  d: 0.13 },
-  { f: 110,   d: 0.13 }, { f: 123.5, d: 0.26 }, { f: 138.6, d: 0.13 },
-  { f: 146.8, d: 0.13 }, { f: 185,   d: 0.26 }, { f: 146.8, d: 0.13 },
-  { f: 138.6, d: 0.13 }, { f: 123.5, d: 0.13 }, { f: 110,   d: 0.13 },
-  { f: 92.5,  d: 0.52 },
-]
-// 7 bars ≈ 15.01 seconds
-const BILLIE_15S: Note[] = [
-  ...BAR1, ...BAR2, ...BAR1, ...BAR2, ...BAR1, ...BAR2, ...BAR1,
-]
-
-function playBillieJean(onDone: () => void): () => void {
-  let stopped = false
-  try {
-    const AC = window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    const ctx = new AC()
-
-    // ── piezo bassline ──
-    let t = ctx.currentTime + 0.05
-    BILLIE_15S.forEach(({ f, d }) => {
-      if (f > 0 && !stopped) {
-        const osc  = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain); gain.connect(ctx.destination)
-        osc.type = "square"
-        osc.frequency.value = f
-        gain.gain.setValueAtTime(0, t)
-        gain.gain.linearRampToValueAtTime(0.11, t + 0.008)
-        gain.gain.setValueAtTime(0.11, t + d - 0.03)
-        gain.gain.linearRampToValueAtTime(0, t + d)
-        osc.start(t); osc.stop(t + d + 0.01)
-      }
-      t += d
-    })
-
-    // ── kick drum (sine drop, beats 1 & 3) ──
-    const quarterNote = 0.513
-    const totalBeats  = Math.floor(15 / quarterNote)
-    for (let b = 0; b < totalBeats; b += 2) {
-      const bt = ctx.currentTime + 0.05 + b * quarterNote
-      const osc  = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = "sine"
-      osc.frequency.setValueAtTime(110, bt)
-      osc.frequency.exponentialRampToValueAtTime(40, bt + 0.12)
-      gain.gain.setValueAtTime(0.18, bt)
-      gain.gain.exponentialRampToValueAtTime(0.001, bt + 0.15)
-      osc.start(bt); osc.stop(bt + 0.16)
-    }
-
-    // ── hi-hat (filtered noise, every 16th) ──
-    const sixteenth = 0.128
-    const hatCount  = Math.floor(15 / sixteenth)
-    for (let h = 0; h < hatCount; h++) {
-      const ht = ctx.currentTime + 0.05 + h * sixteenth
-      const bufSize = ctx.sampleRate * 0.04
-      const buffer  = ctx.createBuffer(1, bufSize, ctx.sampleRate)
-      const data    = buffer.getChannelData(0)
-      for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1
-      const src    = ctx.createBufferSource()
-      const filter = ctx.createBiquadFilter()
-      const gain   = ctx.createGain()
-      src.buffer = buffer
-      filter.type = "highpass"; filter.frequency.value = 8000
-      src.connect(filter); filter.connect(gain); gain.connect(ctx.destination)
-      gain.gain.setValueAtTime(0.04, ht)
-      gain.gain.exponentialRampToValueAtTime(0.001, ht + 0.04)
-      src.start(ht); src.stop(ht + 0.04)
-    }
-
-    const id = setTimeout(() => { ctx.close(); onDone() }, 15200)
-    return () => { stopped = true; clearTimeout(id); ctx.close() }
-  } catch {
-    const id = setTimeout(onDone, 15000)
-    return () => clearTimeout(id)
-  }
+interface LoadStep {
+  msg: string
+  pct: number
+  speech: string
+  status: "OK" | "WARN" | ""
+  color: string
 }
 
-function playOhShitAlarm(): void {
-  // Buzzer alarm burst first
-  try {
-    const AC = window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    const ctx = new AC()
-    ;[0, 0.18, 0.36].forEach((delay) => {
-      const osc  = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = "square"; osc.frequency.value = 880
-      gain.gain.setValueAtTime(0, ctx.currentTime + delay)
-      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + delay + 0.01)
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + 0.14)
-      osc.start(ctx.currentTime + delay)
-      osc.stop(ctx.currentTime + delay + 0.15)
-    })
-    setTimeout(() => ctx.close(), 800)
-  } catch { /* skip */ }
+// ── Loading steps (firmware flash simulation) ────────────────────────────────
+const LOAD_STEPS: LoadStep[] = [
+  { msg: "Initializing ARM Cortex-M4F @ 180MHz",   pct: 8,  speech: "Initializing ARM Cortex M4 processor",  status: "OK",   color: "#86efac" },
+  { msg: "ROM bootloader verified  [0x08000000]",   pct: 18, speech: "Bootloader verified",                   status: "OK",   color: "#86efac" },
+  { msg: "Flash CRC check          [PASS]",         pct: 27, speech: "Flash integrity check passed",          status: "OK",   color: "#86efac" },
+  { msg: "Mounting NVS storage     [OK]",           pct: 36, speech: "Storage mounted",                      status: "OK",   color: "#86efac" },
+  { msg: "Init UART  115200 8N1    [OK]",           pct: 45, speech: "UART initialized",                     status: "OK",   color: "#86efac" },
+  { msg: "Init CAN   500kbps       [OK]",           pct: 54, speech: "CAN bus online",                       status: "OK",   color: "#86efac" },
+  { msg: "Init SPI   10MHz CPOL=0  [OK]",           pct: 62, speech: "SPI ready",                            status: "OK",   color: "#86efac" },
+  { msg: "FreeRTOS scheduler start [OK]",           pct: 72, speech: "FreeRTOS scheduler started",           status: "OK",   color: "#86efac" },
+  { msg: "Spawning portfolio_task  [OK]",           pct: 82, speech: "Portfolio task spawned",               status: "OK",   color: "#86efac" },
+  { msg: "Loading firmware v2.1   ...",             pct: 91, speech: "Loading Kiran Jojare firmware",        status: "",     color: "#fbbf24" },
+  { msg: "Finalizing heap layout  ...",             pct: 97, speech: "Almost there",                        status: "WARN", color: "#fbbf24" },
+]
 
-  // Web Speech API — the pièce de résistance
-  try {
-    if ("speechSynthesis" in window) {
-      const u = new SpeechSynthesisUtterance("oh shit")
-      u.rate  = 0.75
-      u.pitch = 0.3
-      u.volume = 0.9
-      window.speechSynthesis.speak(u)
-    }
-  } catch { /* skip */ }
-}
-
-// ── crash log lines ──────────────────────────────────────────────────────────
+// ── ARM HardFault dump lines ─────────────────────────────────────────────────
 const CRASH_LINES = [
   { text: "[    0.000] *** KERNEL PANIC — not syncing: fatal exception ***", color: "#ef4444" },
   { text: "[    0.001] CPU: ARM Cortex-M4F  Rev: r0p1  Clock: 180MHz",       color: "#fbbf24" },
@@ -145,92 +47,184 @@ const CRASH_LINES = [
   { text: "[    0.007]   #2  main+0x4  <0x0800BEEF>",                        color: "#a1a1aa" },
   { text: "",                                                                  color: "#a1a1aa" },
   { text: "┌─────────────────────────────────┐",                              color: "#ef4444" },
-  { text: "│       *** OH  SHIT ***          │",                              color: "#ef4444" },
+  { text: "│     *** SYSTEM HALTED ***       │",                              color: "#ef4444" },
   { text: "└─────────────────────────────────┘",                              color: "#ef4444" },
   { text: "",                                                                  color: "#a1a1aa" },
 ]
 
-interface FirmwareCrashProps { onComplete: () => void }
+// ── TTS helpers ──────────────────────────────────────────────────────────────
+function speak(text: string, opts?: { rate?: number; pitch?: number; volume?: number }): void {
+  try {
+    if (!("speechSynthesis" in window)) return
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    u.rate   = opts?.rate   ?? 0.85
+    u.pitch  = opts?.pitch  ?? 0.4
+    u.volume = opts?.volume ?? 0.9
+    window.speechSynthesis.speak(u)
+  } catch { /* skip */ }
+}
 
-export function BootSequence({ onComplete }: FirmwareCrashProps): React.ReactElement {
-  const [lines, setLines]         = useState<typeof CRASH_LINES>([])
-  const [reboot, setReboot]       = useState<number | null>(null)
-  const [flashRed, setFlashRed]   = useState(false)
-  const [opacity, setOpacity]     = useState(0)
-  const [ohShitFlash, setOhShitFlash] = useState(false)
-  const stopMusic = useRef<(() => void) | null>(null)
+// ── Alarm buzzer ─────────────────────────────────────────────────────────────
+function playAlarm(): void {
+  try {
+    const AC = window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const ctx = new AC()
+    ;[0, 0.22, 0.44, 0.66].forEach((delay) => {
+      const osc  = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.type = "square"
+      osc.frequency.value = 880
+      gain.gain.setValueAtTime(0, ctx.currentTime + delay)
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + delay + 0.01)
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + 0.18)
+      osc.start(ctx.currentTime + delay)
+      osc.stop(ctx.currentTime + delay + 0.2)
+    })
+    setTimeout(() => ctx.close(), 1200)
+  } catch { /* skip */ }
+}
+
+// ── Boot beep (startup) ──────────────────────────────────────────────────────
+function playBootBeep(): void {
+  try {
+    const AC = window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const ctx = new AC()
+    const osc  = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.type = "square"; osc.frequency.value = 440
+    gain.gain.setValueAtTime(0, ctx.currentTime)
+    gain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.01)
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.12)
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.13)
+    setTimeout(() => ctx.close(), 300)
+  } catch { /* skip */ }
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
+interface BootSequenceProps { onComplete: () => void }
+
+export function BootSequence({ onComplete }: BootSequenceProps): React.ReactElement {
+  const [phase,       setPhase]       = useState<Phase>("loading")
+  const [stepIdx,     setStepIdx]     = useState(0)
+  const [progress,    setProgress]    = useState(0)
+  const [glitch,      setGlitch]      = useState(false)
+  const [dumpLines,   setDumpLines]   = useState<typeof CRASH_LINES>([])
+  const [reboot,      setReboot]      = useState<number | null>(null)
+  const [opacity,     setOpacity]     = useState(0)
+  const [flashRed,    setFlashRed]    = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Fade in + red flash
+  // Fade in
   useEffect(() => {
-    setFlashRed(true)
-    setTimeout(() => setFlashRed(false), 400)
     setTimeout(() => setOpacity(1), 40)
+    speak("Firmware flash initiated. Stand by.", { rate: 0.8, pitch: 0.35 })
+    playBootBeep()
   }, [])
 
-  // "Oh shit" alarm fires immediately
-  useEffect(() => { playOhShitAlarm() }, [])
-
-  // Start music after 0.6s, schedule reboot countdown at 12s
+  // ── Phase 1: loading steps ────────────────────────────────────────────────
   useEffect(() => {
-    const t1 = setTimeout(() => {
-      stopMusic.current = playBillieJean(() => {
-        setReboot(3)
+    if (phase !== "loading") return
+    if (stepIdx >= LOAD_STEPS.length) {
+      // All steps done → crash
+      setTimeout(() => setPhase("crashing"), 400)
+      return
+    }
+    const step = LOAD_STEPS[stepIdx]
+    const delay = stepIdx === 0 ? 800 : 650
+    const id = setTimeout(() => {
+      setProgress(step.pct)
+      speak(step.speech, { rate: 0.9, pitch: 0.35 })
+      playBootBeep()
+      setStepIdx(i => i + 1)
+    }, delay)
+    return () => clearTimeout(id)
+  }, [phase, stepIdx])
+
+  // ── Phase 2: crash transition ─────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== "crashing") return
+    // Glitch flashes
+    setGlitch(true)
+    setTimeout(() => setGlitch(false), 120)
+    setTimeout(() => setGlitch(true), 280)
+    setTimeout(() => setGlitch(false), 420)
+
+    // Alarm + "oh noooo" TTS
+    setTimeout(() => {
+      playAlarm()
+      speak("Oh no. Oh no no no no no. OHHHHHH NOOOOOO. Hard fault exception. System... halted.", {
+        rate: 0.7, pitch: 0.25, volume: 1,
       })
-    }, 600)
+    }, 300)
 
-    // Reboot countdown at 12s
-    const t2 = setTimeout(() => setReboot(3), 12000)
+    // Flash red
+    setTimeout(() => {
+      setFlashRed(true)
+      setTimeout(() => setFlashRed(false), 500)
+    }, 500)
 
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // Move to dump phase
+    setTimeout(() => setPhase("dumping"), 2200)
+  }, [phase])
 
-  // Reboot countdown ticks
+  // ── Phase 3: typewriter dump ──────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== "dumping") return
+    let idx = 0
+    const tick = (): void => {
+      if (idx >= CRASH_LINES.length) {
+        setTimeout(() => setReboot(3), 1500)
+        return
+      }
+      setDumpLines(prev => [...prev, CRASH_LINES[idx]])
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      idx++
+      setTimeout(tick, idx < 10 ? 80 : 110)
+    }
+    setTimeout(tick, 300)
+  }, [phase])
+
+  // ── Phase 4: reboot countdown ─────────────────────────────────────────────
   useEffect(() => {
     if (reboot === null) return
     if (reboot === 0) {
+      speak("Rebooting. Welcome back.", { rate: 0.85, pitch: 0.4 })
       setOpacity(0)
-      stopMusic.current?.()
-      setTimeout(onComplete, 500)
+      setTimeout(onComplete, 600)
       return
     }
     const id = setTimeout(() => setReboot(r => (r ?? 1) - 1), 1000)
     return () => clearTimeout(id)
   }, [reboot, onComplete])
 
-  // Typewriter crash lines
-  useEffect(() => {
-    let idx = 0
-    const tick = (): void => {
-      if (idx >= CRASH_LINES.length) {
-        // Flash the OH SHIT box
-        setOhShitFlash(true)
-        setTimeout(() => setOhShitFlash(false), 200)
-        setTimeout(() => { setOhShitFlash(true); setTimeout(() => setOhShitFlash(false), 200) }, 500)
-        return
-      }
-      setLines(prev => [...prev, CRASH_LINES[idx]])
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-      idx++
-      setTimeout(tick, idx < 10 ? 90 : 120)
-    }
-    setTimeout(tick, 200)
-  }, [])
+  const dismiss = (): void => {
+    window.speechSynthesis?.cancel()
+    setOpacity(0)
+    setTimeout(onComplete, 500)
+  }
+
+  const isLoading  = phase === "loading"
+  const isCrashing = phase === "crashing"
+  const isDumping  = phase === "dumping" || reboot !== null
 
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4"
       style={{
-        background: flashRed ? "rgba(80,0,0,0.97)" : "rgba(0,0,0,0.96)",
+        background: flashRed ? "rgba(90,0,0,0.98)" : "rgba(0,0,0,0.96)",
         opacity,
-        transition: flashRed ? "background 0.05s" : "opacity 0.45s ease, background 0.4s ease",
+        transition: flashRed ? "background 0.06s" : "opacity 0.45s ease, background 0.4s ease",
       }}
-      onClick={() => { stopMusic.current?.(); setOpacity(0); setTimeout(onComplete, 500) }}
+      onClick={dismiss}
     >
       <div
         className="w-full max-w-2xl rounded border overflow-hidden"
-        style={{ borderColor: ohShitFlash ? "#ef4444" : "#3f3f46" }}
+        style={{ borderColor: isCrashing || flashRed ? "#ef4444" : "#3f3f46" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Chrome bar */}
@@ -240,37 +234,95 @@ export function BootSequence({ onComplete }: FirmwareCrashProps): React.ReactEle
             <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/40"/>
             <div className="w-2.5 h-2.5 rounded-full bg-green-500/40"/>
           </div>
-          <span className="font-mono text-xs text-red-400">⚠ HARD FAULT EXCEPTION — ARM Cortex-M4F</span>
-          <span className="ml-auto font-mono text-[10px] text-zinc-600">HFSR 0xC0000000</span>
+          <span className="font-mono text-xs text-cyan-400">
+            {isLoading ? "⚡ KJ-DEV-BOARD v2.1 — Firmware Loader" : "⚠ HARD FAULT EXCEPTION — ARM Cortex-M4F"}
+          </span>
+          <span className="ml-auto font-mono text-[10px] text-zinc-600">
+            {isLoading ? `${progress}%` : "HFSR 0xC0000000"}
+          </span>
         </div>
 
-        {/* Crash log */}
+        {/* Body */}
         <div
           ref={scrollRef}
-          className="bg-black p-4 h-72 overflow-y-auto"
+          className="bg-black p-4 h-80 overflow-y-auto font-mono text-xs leading-5"
+          style={{ filter: glitch ? "hue-rotate(180deg) invert(0.1)" : "none", transition: "filter 0.05s" }}
         >
-          {lines.map((line, i) => (
-            <div
-              key={i}
-              className="font-mono text-xs leading-5 whitespace-pre"
-              style={{ color: line.color }}
-            >
-              {line.text}
-            </div>
-          ))}
+          {/* ── Loading phase ── */}
+          {(isLoading || isCrashing) && (
+            <div className="space-y-1">
+              <div className="text-cyan-500 mb-3 text-[11px] tracking-widest">
+                KJ-DEV-BOARD FIRMWARE FLASH UTILITY v1.0
+              </div>
 
-          {/* Reboot countdown */}
-          {reboot !== null && reboot > 0 && (
-            <div className="font-mono text-xs text-yellow-400 mt-2 animate-pulse">
-              Rebooting in {reboot}...
+              {LOAD_STEPS.slice(0, stepIdx).map((step, i) => (
+                <div key={i} className="flex items-center gap-2 whitespace-pre" style={{ color: step.color }}>
+                  <span className="text-zinc-600 shrink-0">[{String(i).padStart(2, "0")}]</span>
+                  <span className="flex-1">{step.msg}</span>
+                  {step.status && (
+                    <span style={{ color: step.status === "OK" ? "#86efac" : "#fbbf24" }}>
+                      [{step.status}]
+                    </span>
+                  )}
+                </div>
+              ))}
+
+              {/* Progress bar */}
+              {stepIdx > 0 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-zinc-500 text-[10px] mb-1">
+                    <span>FLASH PROGRESS</span>
+                    <span>{isCrashing ? "97" : progress}%</span>
+                  </div>
+                  <div className="w-full h-3 bg-zinc-900 rounded-sm border border-zinc-800 overflow-hidden">
+                    <div
+                      className="h-full rounded-sm transition-all duration-500"
+                      style={{
+                        width: `${isCrashing ? 97 : progress}%`,
+                        background: isCrashing
+                          ? "linear-gradient(90deg, #ef4444, #dc2626)"
+                          : "linear-gradient(90deg, #06b6d4, #22d3ee)",
+                        boxShadow: isCrashing
+                          ? "0 0 8px rgba(239,68,68,0.6)"
+                          : "0 0 8px rgba(6,182,212,0.5)",
+                      }}
+                    />
+                  </div>
+
+                  {isCrashing && (
+                    <div className="mt-2 text-red-500 animate-pulse text-center tracking-widest text-[11px]">
+                      ⚠ WRITE ERROR — UNEXPECTED EXCEPTION ⚠
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Dump phase ── */}
+          {isDumping && (
+            <div>
+              {dumpLines.map((line, i) => (
+                <div key={i} className="whitespace-pre" style={{ color: line.color }}>
+                  {line.text}
+                </div>
+              ))}
+
+              {reboot !== null && reboot > 0 && (
+                <div className="text-yellow-400 mt-2 animate-pulse">
+                  Rebooting in {reboot}...
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Status bar */}
         <div className="bg-zinc-900 border-t border-zinc-700 px-4 py-1.5 flex items-center justify-between font-mono text-[9px]">
-          <span className="text-red-500">● FAULT ACTIVE</span>
-          <span className="text-zinc-600">♩ Billie Jean — MJ — piezo buzzer</span>
+          <span style={{ color: isCrashing || isDumping ? "#ef4444" : "#22d3ee" }}>
+            {isCrashing || isDumping ? "● FAULT ACTIVE" : "● FLASHING"}
+          </span>
+          <span className="text-zinc-600">KJ-DEV-BOARD · ARM Cortex-M4F · 180MHz</span>
           <span className="text-zinc-700">click to dismiss</span>
         </div>
       </div>
