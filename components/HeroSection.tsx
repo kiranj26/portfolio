@@ -2,6 +2,12 @@
 
 import Link from "next/link"
 import { ArrowDown } from "lucide-react"
+import { MorphingText } from "@/components/ui/morphing-text"
+import { BlurFade } from "@/components/ui/blur-fade"
+import { Particles } from "@/components/ui/particles"
+import { FlickeringGrid } from "@/components/ui/flickering-grid"
+
+const DOMAIN_WORDS = ["automotive", "ev charging", "industrial", "rtos", "bare metal"]
 
 function GithubIcon({ className }: { className?: string }): React.ReactElement {
   return (
@@ -10,27 +16,76 @@ function GithubIcon({ className }: { className?: string }): React.ReactElement {
     </svg>
   )
 }
-import { MorphingText } from "@/components/ui/morphing-text"
-import { BlurFade } from "@/components/ui/blur-fade"
-
-const DOMAIN_WORDS = ["automotive", "ev charging", "industrial", "rtos", "bare metal"]
 
 export function HeroSection(): React.ReactElement {
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 overflow-hidden">
-      {/* Subtle grid background */}
+    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 overflow-hidden bg-zinc-950">
+
+      {/* Layer 1 — FlickeringGrid: very faint, full coverage */}
+      <div className="absolute inset-0 opacity-[0.06]">
+        <FlickeringGrid
+          color="#06b6d4"
+          squareSize={3}
+          gridGap={8}
+          flickerChance={0.08}
+          maxOpacity={0.6}
+          className="w-full h-full"
+        />
+      </div>
+
+      {/* Layer 2 — Dot grid: PCB-style static dots */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.07]"
         style={{
-          backgroundImage: `linear-gradient(#06b6d4 1px, transparent 1px), linear-gradient(90deg, #06b6d4 1px, transparent 1px)`,
-          backgroundSize: "48px 48px",
+          backgroundImage: "radial-gradient(circle, #06b6d4 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
         }}
       />
 
+      {/* Layer 3 — Noise texture via SVG filter */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.04]" aria-hidden="true">
+        <filter id="noise">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#noise)" />
+      </svg>
+
+      {/* Layer 4 — Radial cyan glow behind the headline */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 40% at 50% 45%, rgba(6,182,212,0.08) 0%, rgba(6,182,212,0.03) 40%, transparent 70%)",
+        }}
+      />
+
+      {/* Layer 5 — Particles: mouse-interactive signal traces */}
+      <Particles
+        className="absolute inset-0"
+        quantity={90}
+        color="#06b6d4"
+        size={0.5}
+        staticity={60}
+        ease={60}
+        vx={0.05}
+        vy={0}
+      />
+
+      {/* Edge vignette to keep text readable */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 100% 100% at 50% 50%, transparent 50%, rgba(9,9,11,0.7) 100%)",
+        }}
+      />
+
+      {/* Content */}
       <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
         <BlurFade delay={0} inView>
           <p className="font-mono text-cyan-400 text-sm tracking-widest uppercase mb-4">
-            firmware engineer
+            firmware engineer · eaton · peachtree city, ga
           </p>
         </BlurFade>
 
@@ -41,13 +96,16 @@ export function HeroSection(): React.ReactElement {
         </BlurFade>
 
         <BlurFade delay={0.2} inView>
-          <p className="font-sans text-zinc-400 text-lg sm:text-xl max-w-2xl mx-auto mb-8">
-            6 years shipping firmware on bare metal —
+          <p className="font-sans text-zinc-300 text-lg sm:text-xl max-w-2xl mx-auto mb-2 leading-relaxed">
+            Production firmware on{" "}
+            <span className="text-cyan-400 font-semibold">10+ silicon families</span> across
+            automotive (ISO&nbsp;26262&nbsp;ASIL-D), EV charging (OCPP&nbsp;1.6),
+            industrial DSP, and space — from bare metal bring-up to shipped product.
           </p>
         </BlurFade>
 
         <BlurFade delay={0.3} inView>
-          <div className="mb-10">
+          <div className="mb-10 mt-6">
             <MorphingText
               texts={DOMAIN_WORDS}
               className="text-cyan-400 font-mono text-3xl sm:text-4xl md:text-5xl h-14 md:h-16"
@@ -77,7 +135,6 @@ export function HeroSection(): React.ReactElement {
         </BlurFade>
       </div>
 
-      {/* Scroll cue */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
         <ArrowDown className="w-5 h-5 text-zinc-600" />
       </div>
