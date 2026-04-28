@@ -3,13 +3,12 @@
 import { useCallback, useState } from "react"
 import Link from "next/link"
 import { ArrowDown } from "lucide-react"
-import { MorphingText }   from "@/components/ui/morphing-text"
-import { BlurFade }       from "@/components/ui/blur-fade"
+import { SevenSegDisplay } from "@/components/ui/seven-seg-display"
+import { BlurFade }        from "@/components/ui/blur-fade"
 import { Particles }      from "@/components/ui/particles"
 import { PcbBackground }  from "@/components/ui/pcb-background"
 import { BootSequence }   from "@/components/BootSequence"
 
-const DOMAIN_WORDS = ["automotive", "ev charging", "industrial", "rtos", "bare metal"]
 
 function GithubIcon({ className }: { className?: string }): React.ReactElement {
   return (
@@ -173,11 +172,8 @@ export function HeroSection(): React.ReactElement {
         </BlurFade>
 
         <BlurFade delay={0.3} inView>
-          <div className="mb-6 mt-6">
-            <MorphingText
-              texts={DOMAIN_WORDS}
-              className="text-cyan-400 font-mono text-3xl sm:text-4xl md:text-5xl h-14 md:h-16"
-            />
+          <div className="mb-6 mt-6 flex justify-center">
+            <SevenSegDisplay />
           </div>
         </BlurFade>
 
