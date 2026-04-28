@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react"
 import Link from "next/link"
 import { ArrowDown } from "lucide-react"
-import { SevenSegDisplay } from "@/components/ui/seven-seg-display"
+import { LcdDisplay }      from "@/components/ui/lcd-display"
 import { BlurFade }        from "@/components/ui/blur-fade"
 import { Particles }      from "@/components/ui/particles"
 import { PcbBackground }  from "@/components/ui/pcb-background"
@@ -173,7 +173,7 @@ export function HeroSection(): React.ReactElement {
 
         <BlurFade delay={0.3} inView>
           <div className="mb-6 mt-6 flex justify-center">
-            <SevenSegDisplay />
+            <LcdDisplay />
           </div>
         </BlurFade>
 
