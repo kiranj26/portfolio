@@ -43,7 +43,7 @@ function PcbSubstrate(): React.ReactElement {
       viewBox="0 0 1200 900"
       preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
-      style={{ opacity: 0.07 }}
+      style={{ opacity: 0.18 }}
     >
       <defs>
         <pattern id="pcb-dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
