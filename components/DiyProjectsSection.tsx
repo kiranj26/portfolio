@@ -36,58 +36,71 @@ function GithubIcon({ className }: { className?: string }): React.ReactElement {
 // ── C: PCB substrate background ───────────────────────────────────────────────
 
 function PcbSubstrate(): React.ReactElement {
+  // Fixed 1200×900 viewBox — traces use absolute coords, scales with preserveAspectRatio
   return (
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 1200 900"
+      preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
-      style={{ opacity: 0.045 }}
+      style={{ opacity: 0.07 }}
     >
       <defs>
-        <pattern id="pcb-grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-          <circle cx="40" cy="40" r="0.8" fill="rgba(184,115,51,0.9)"/>
-          <circle cx="0"  cy="0"  r="0.8" fill="rgba(184,115,51,0.9)"/>
-          <circle cx="40" cy="0"  r="0.8" fill="rgba(184,115,51,0.9)"/>
-          <circle cx="0"  cy="40" r="0.8" fill="rgba(184,115,51,0.9)"/>
+        <pattern id="pcb-dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+          <circle cx="0"  cy="0"  r="1" fill="rgba(184,115,51,1)"/>
+          <circle cx="40" cy="0"  r="1" fill="rgba(184,115,51,1)"/>
+          <circle cx="0"  cy="40" r="1" fill="rgba(184,115,51,1)"/>
+          <circle cx="40" cy="40" r="1" fill="rgba(184,115,51,1)"/>
         </pattern>
       </defs>
 
       {/* Dot grid */}
-      <rect width="100%" height="100%" fill="url(#pcb-grid)"/>
+      <rect width="1200" height="900" fill="url(#pcb-dots)"/>
 
-      {/* Sparse horizontal traces */}
-      <line x1="0"   y1="120" x2="18%"  y2="120" stroke="rgba(184,115,51,0.7)" strokeWidth="1"/>
-      <line x1="22%" y1="120" x2="45%"  y2="120" stroke="rgba(184,115,51,0.7)" strokeWidth="1"/>
-      <line x1="60%" y1="120" x2="100%" y2="120" stroke="rgba(184,115,51,0.5)" strokeWidth="1"/>
+      {/* Horizontal traces */}
+      <line x1="0"   y1="120" x2="210"  y2="120" stroke="rgba(184,115,51,0.9)" strokeWidth="1.2"/>
+      <line x1="260" y1="120" x2="540"  y2="120" stroke="rgba(184,115,51,0.9)" strokeWidth="1.2"/>
+      <line x1="720" y1="120" x2="1200" y2="120" stroke="rgba(184,115,51,0.7)" strokeWidth="1.2"/>
 
-      <line x1="0"   y1="340" x2="30%"  y2="340" stroke="rgba(184,115,51,0.6)" strokeWidth="1"/>
-      <line x1="55%" y1="340" x2="80%"  y2="340" stroke="rgba(184,115,51,0.5)" strokeWidth="1"/>
-      <line x1="85%" y1="340" x2="100%" y2="340" stroke="rgba(184,115,51,0.4)" strokeWidth="1"/>
+      <line x1="0"   y1="340" x2="360"  y2="340" stroke="rgba(184,115,51,0.8)" strokeWidth="1.2"/>
+      <line x1="660" y1="340" x2="960"  y2="340" stroke="rgba(184,115,51,0.7)" strokeWidth="1.2"/>
+      <line x1="1020" y1="340" x2="1200" y2="340" stroke="rgba(184,115,51,0.6)" strokeWidth="1.2"/>
 
-      <line x1="0"   y1="560" x2="12%"  y2="560" stroke="rgba(184,115,51,0.5)" strokeWidth="1"/>
-      <line x1="40%" y1="560" x2="68%"  y2="560" stroke="rgba(184,115,51,0.6)" strokeWidth="1"/>
-      <line x1="75%" y1="560" x2="100%" y2="560" stroke="rgba(184,115,51,0.4)" strokeWidth="1"/>
+      <line x1="0"   y1="560" x2="145"  y2="560" stroke="rgba(184,115,51,0.7)" strokeWidth="1.2"/>
+      <line x1="480" y1="560" x2="820"  y2="560" stroke="rgba(184,115,51,0.8)" strokeWidth="1.2"/>
+      <line x1="900" y1="560" x2="1200" y2="560" stroke="rgba(184,115,51,0.6)" strokeWidth="1.2"/>
 
-      {/* Sparse vertical traces */}
-      <line x1="18%"  y1="80"  x2="18%"  y2="160" stroke="rgba(184,115,51,0.6)" strokeWidth="1"/>
-      <line x1="45%"  y1="80"  x2="45%"  y2="200" stroke="rgba(184,115,51,0.5)" strokeWidth="1"/>
-      <line x1="60%"  y1="60"  x2="60%"  y2="140" stroke="rgba(184,115,51,0.4)" strokeWidth="1"/>
-      <line x1="80%"  y1="300" x2="80%"  y2="380" stroke="rgba(184,115,51,0.5)" strokeWidth="1"/>
+      <line x1="0"   y1="760" x2="500"  y2="760" stroke="rgba(184,115,51,0.6)" strokeWidth="1.2"/>
+      <line x1="700" y1="760" x2="1200" y2="760" stroke="rgba(184,115,51,0.5)" strokeWidth="1.2"/>
 
-      {/* Via dots at trace junctions */}
-      {[
-        [18, 120], [45, 120], [60, 120],
-        [80, 340], [30, 340],
-        [40, 560], [68, 560],
-      ].map(([cx, cy], i) => (
+      {/* Vertical traces */}
+      <line x1="210" y1="80"  x2="210" y2="180" stroke="rgba(184,115,51,0.8)" strokeWidth="1.2"/>
+      <line x1="540" y1="60"  x2="540" y2="200" stroke="rgba(184,115,51,0.7)" strokeWidth="1.2"/>
+      <line x1="720" y1="60"  x2="720" y2="160" stroke="rgba(184,115,51,0.6)" strokeWidth="1.2"/>
+      <line x1="960" y1="280" x2="960" y2="400" stroke="rgba(184,115,51,0.7)" strokeWidth="1.2"/>
+      <line x1="360" y1="280" x2="360" y2="420" stroke="rgba(184,115,51,0.6)" strokeWidth="1.2"/>
+      <line x1="480" y1="480" x2="480" y2="640" stroke="rgba(184,115,51,0.7)" strokeWidth="1.2"/>
+      <line x1="820" y1="500" x2="820" y2="640" stroke="rgba(184,115,51,0.6)" strokeWidth="1.2"/>
+      <line x1="500" y1="700" x2="500" y2="820" stroke="rgba(184,115,51,0.5)" strokeWidth="1.2"/>
+
+      {/* Via rings at junctions */}
+      {([
+        [210, 120], [540, 120], [720, 120],
+        [360, 340], [960, 340],
+        [480, 560], [820, 560],
+        [500, 760],
+      ] as [number, number][]).map(([cx, cy], i) => (
         <g key={i}>
-          <circle cx={`${cx}%`} cy={cy} r="4"   fill="rgba(184,115,51,0.25)" stroke="rgba(200,140,60,0.4)" strokeWidth="0.8"/>
-          <circle cx={`${cx}%`} cy={cy} r="1.5" fill="rgba(10,15,10,0.9)"/>
+          <circle cx={cx} cy={cy} r="5"   fill="rgba(184,115,51,0.3)" stroke="rgba(200,140,60,0.6)" strokeWidth="1"/>
+          <circle cx={cx} cy={cy} r="2"   fill="rgba(8,12,8,0.95)"/>
         </g>
       ))}
 
       {/* Corner fiducials */}
-      <circle cx="24" cy="24" r="6" fill="none" stroke="rgba(184,115,51,0.4)" strokeWidth="0.8"/>
-      <circle cx="24" cy="24" r="2" fill="rgba(184,115,51,0.3)"/>
+      <circle cx="30"   cy="30"  r="7" fill="none" stroke="rgba(184,115,51,0.5)" strokeWidth="1"/>
+      <circle cx="30"   cy="30"  r="2" fill="rgba(184,115,51,0.4)"/>
+      <circle cx="1170" cy="30"  r="7" fill="none" stroke="rgba(184,115,51,0.5)" strokeWidth="1"/>
+      <circle cx="1170" cy="30"  r="2" fill="rgba(184,115,51,0.4)"/>
     </svg>
   )
 }
