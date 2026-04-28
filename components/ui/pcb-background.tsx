@@ -242,86 +242,287 @@ export function PcbBackground(): React.ReactElement {
           </g>
         ))}
 
-        {/* ── MAIN MCU — STM32 QFP-64 ── */}
+        {/* ── MAIN MCU — STM32F446ZET6 LQFP-64 ── */}
         <g transform="translate(420,370)">
-          {/* Glow border */}
+          {/* Outer glow ring */}
           <rect x="-4" y="-4" width="173" height="173"
             fill="none" stroke="rgba(6,182,212,0.6)" strokeWidth="1.5" className="ic-u1-glow"/>
-          <rect width="165" height="165" fill="rgba(18,22,18,0.92)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-          <rect x="22" y="22" width="121" height="121" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
-          {/* Labels */}
-          <text x="82" y="68"  fill="rgba(6,182,212,0.0)" fontSize="9"  fontFamily="monospace" textAnchor="middle" className="label-scan"
-            style={{fill:"rgba(6,182,212,0.45)"}}>STM32F446</text>
-          <text x="82" y="82"  fill="rgba(255,255,255,0.07)" fontSize="7"  fontFamily="monospace" textAnchor="middle">LQFP-64</text>
-          <text x="82" y="96" fill="rgba(6,182,212,0.18)"  fontSize="7"  fontFamily="monospace" textAnchor="middle">180MHz · 2MB Flash</text>
-          {/* Mini activity grid inside chip */}
-          {[[40,115],[52,115],[64,115],[76,115],[88,115],[100,115],[112,115]].map(([x,y],i)=>(
-            <rect key={i} x={x} y={y} width="8" height="4" rx="0.5"
-              fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.2)" strokeWidth="0.3"
-              style={{animation:`pin-flash ${1.2+i*0.3}s ease-in-out infinite ${i*0.15}s`}}/>
+
+          {/* Package body */}
+          <rect width="165" height="165" fill="rgba(14,18,14,0.96)"
+            stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
+
+          {/* Die boundary (inner) */}
+          <rect x="18" y="18" width="129" height="129"
+            fill="rgba(10,16,10,0.9)" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5"/>
+
+          {/* ── Die floorplan ── */}
+          {/* CPU core block */}
+          <rect x="38" y="27" width="89" height="24" rx="1"
+            fill="rgba(6,182,212,0.06)" stroke="rgba(6,182,212,0.25)" strokeWidth="0.6"/>
+          <text x="82" y="37" fill="rgba(6,182,212,0.5)" fontSize="6" fontFamily="monospace"
+            textAnchor="middle" className="label-scan">ARM Cortex-M4F + FPU</text>
+          <text x="82" y="46" fill="rgba(6,182,212,0.28)" fontSize="5" fontFamily="monospace"
+            textAnchor="middle">180MHz · DSP · NVIC</text>
+
+          {/* AHB bus line */}
+          <line x1="28" y1="56" x2="137" y2="56"
+            stroke="rgba(6,182,212,0.22)" strokeWidth="1"/>
+          <text x="28" y="53" fill="rgba(255,255,255,0.1)" fontSize="4.5" fontFamily="monospace">AHB1/2</text>
+
+          {/* Memory row */}
+          <rect x="28" y="60" width="38" height="20" rx="1"
+            fill="rgba(6,182,212,0.05)" stroke="rgba(6,182,212,0.18)" strokeWidth="0.5"/>
+          <text x="47" y="69" fill="rgba(6,182,212,0.35)" fontSize="5" fontFamily="monospace" textAnchor="middle">2MB Flash</text>
+          <text x="47" y="76" fill="rgba(255,255,255,0.1)" fontSize="4" fontFamily="monospace" textAnchor="middle">0x0800_0000</text>
+
+          <rect x="70" y="60" width="32" height="20" rx="1"
+            fill="rgba(6,182,212,0.05)" stroke="rgba(6,182,212,0.15)" strokeWidth="0.5"/>
+          <text x="86" y="69" fill="rgba(6,182,212,0.3)" fontSize="5" fontFamily="monospace" textAnchor="middle">128K SRAM</text>
+          <text x="86" y="76" fill="rgba(255,255,255,0.08)" fontSize="4" fontFamily="monospace" textAnchor="middle">0x2000_0000</text>
+
+          <rect x="106" y="60" width="26" height="20" rx="1"
+            fill="rgba(6,182,212,0.04)" stroke="rgba(6,182,212,0.12)" strokeWidth="0.5"/>
+          <text x="119" y="69" fill="rgba(6,182,212,0.25)" fontSize="5" fontFamily="monospace" textAnchor="middle">64K CCM</text>
+          <text x="119" y="76" fill="rgba(255,255,255,0.07)" fontSize="4" fontFamily="monospace" textAnchor="middle">DMA</text>
+
+          {/* APB bus line */}
+          <line x1="28" y1="86" x2="137" y2="86"
+            stroke="rgba(6,182,212,0.14)" strokeWidth="0.6"/>
+          <text x="28" y="83" fill="rgba(255,255,255,0.08)" fontSize="4.5" fontFamily="monospace">APB1/2</text>
+
+          {/* Peripheral strip */}
+          {[
+            {x:28,  w:22, label:"UART", sub:"6x"},
+            {x:53,  w:20, label:"SPI",  sub:"4x"},
+            {x:76,  w:20, label:"CAN",  sub:"2x"},
+            {x:99,  w:18, label:"I2C",  sub:"3x"},
+            {x:120, w:17, label:"ADC",  sub:"12b"},
+          ].map(({x,w,label,sub},i)=>(
+            <g key={i}>
+              <rect x={x} y={89} width={w} height={18} rx="1"
+                fill="rgba(6,182,212,0.04)" stroke="rgba(6,182,212,0.15)" strokeWidth="0.5"
+                style={{animation:`pin-flash ${2+i*0.4}s ease-in-out infinite ${i*0.2}s`}}/>
+              <text x={x+w/2} y={98} fill="rgba(6,182,212,0.38)" fontSize="5.5"
+                fontFamily="monospace" textAnchor="middle">{label}</text>
+              <text x={x+w/2} y={104} fill="rgba(255,255,255,0.1)" fontSize="4"
+                fontFamily="monospace" textAnchor="middle">{sub}</text>
+            </g>
           ))}
-          {/* Top pins */}
+
+          {/* DMA bar */}
+          <rect x="28" y="111" width="109" height="10" rx="1"
+            fill="rgba(6,182,212,0.03)" stroke="rgba(6,182,212,0.10)" strokeWidth="0.5"/>
+          <text x="82" y="118" fill="rgba(6,182,212,0.2)" fontSize="5"
+            fontFamily="monospace" textAnchor="middle">DMA1 / DMA2 · 16 streams</text>
+
+          {/* Bus vertical drops from AHB to memory */}
+          {[47,86,119].map((x,i)=>(
+            <line key={i} x1={x} y1="56" x2={x} y2="60"
+              stroke="rgba(6,182,212,0.15)" strokeWidth="0.5"/>
+          ))}
+          {/* Bus drops from APB to peripherals */}
+          {[39,63,86,108,128].map((x,i)=>(
+            <line key={i} x1={x} y1="86" x2={x} y2="89"
+              stroke="rgba(6,182,212,0.10)" strokeWidth="0.5"/>
+          ))}
+
+          {/* ST logo (overlapping circles, top-right corner) */}
+          <circle cx="148" cy="27" r="8" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
+          <circle cx="155" cy="27" r="8" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
+          <text x="152" y="30" fill="rgba(255,255,255,0.1)" fontSize="5"
+            fontFamily="monospace" textAnchor="middle" fontWeight="bold">ST</text>
+
+          {/* Silkscreen markings */}
+          <text x="82" y="-18" fill="rgba(255,255,255,0.14)" fontSize="11"
+            fontFamily="monospace" textAnchor="middle" fontWeight="bold">U1</text>
+          <text x="82" y="-7" fill="rgba(255,255,255,0.18)" fontSize="7"
+            fontFamily="monospace" textAnchor="middle">STM32F446ZET6</text>
+          <text x="30" y="178" fill="rgba(255,255,255,0.06)" fontSize="5.5"
+            fontFamily="monospace">LQFP-64  2309C  TAIYO</text>
+
+          {/* Pin 1 dot */}
+          <circle cx="10" cy="10" r="4" fill="rgba(255,255,255,0.2)"/>
+
+          {/* Pins — top row (49–64 standard QFP, left to right) */}
+          {Array.from({length:16},(_,i)=>{
+            const active = i===5||i===6
+            return (
+              <g key={i}>
+                <rect x={8+i*9.8} y={-10} width={6} height={10}
+                  fill={active?"rgba(6,182,212,0.7)":"rgba(184,115,51,0.45)"} rx="0.5"
+                  className={i===5?"pin-tx":i===6?"pin-rx":undefined}/>
+                {i%4===0&&<text x={8+i*9.8+3} y={-13} fill="rgba(255,255,255,0.1)"
+                  fontSize="4.5" fontFamily="monospace" textAnchor="middle">{49+i}</text>}
+              </g>
+            )
+          })}
+          {/* Top active pin labels */}
+          <text x={8+5*9.8+3} y={-14} fill="rgba(6,182,212,0.45)" fontSize="4.5" fontFamily="monospace" textAnchor="middle">PA9</text>
+          <text x={8+5*9.8+3} y={-20} fill="rgba(6,182,212,0.3)"  fontSize="4"   fontFamily="monospace" textAnchor="middle">TX1</text>
+          <text x={8+6*9.8+3} y={-14} fill="rgba(6,182,212,0.45)" fontSize="4.5" fontFamily="monospace" textAnchor="middle">PA10</text>
+          <text x={8+6*9.8+3} y={-20} fill="rgba(6,182,212,0.3)"  fontSize="4"   fontFamily="monospace" textAnchor="middle">RX1</text>
+
+          {/* Pins — bottom (17–32) */}
+          {Array.from({length:16},(_,i)=>{
+            const active = i===7||i===8
+            return (
+              <g key={i}>
+                <rect x={8+i*9.8} y={165} width={6} height={10}
+                  fill={active?"rgba(6,182,212,0.7)":"rgba(184,115,51,0.45)"} rx="0.5"
+                  className={i===7?"pin-sck":i===8?"pin-can":undefined}/>
+                {i%4===0&&<text x={8+i*9.8+3} y={180} fill="rgba(255,255,255,0.1)"
+                  fontSize="4.5" fontFamily="monospace" textAnchor="middle">{17+i}</text>}
+              </g>
+            )
+          })}
+          <text x={8+7*9.8+3} y={180} fill="rgba(6,182,212,0.4)" fontSize="4.5" fontFamily="monospace" textAnchor="middle">SCK</text>
+          <text x={8+8*9.8+3} y={180} fill="rgba(6,182,212,0.4)" fontSize="4.5" fontFamily="monospace" textAnchor="middle">CAN</text>
+
+          {/* Pins — left (1–16) */}
           {Array.from({length:16},(_,i)=>(
-            <rect key={i} x={8+i*9.8} y={-9} width={6} height={9}
-              fill={i===3||i===4?"rgba(6,182,212,0.7)":"rgba(184,115,51,0.42)"} rx="0.5"
-              className={i===3?"pin-tx":i===4?"pin-rx":undefined}/>
+            <g key={i}>
+              <rect x={-10} y={8+i*9.8} width={10} height={6}
+                fill="rgba(184,115,51,0.45)" rx="0.5"/>
+              {i%4===0&&<text x={-13} y={8+i*9.8+5} fill="rgba(255,255,255,0.1)"
+                fontSize="4.5" fontFamily="monospace" textAnchor="end">{i+1}</text>}
+            </g>
           ))}
-          {/* Bottom pins */}
+
+          {/* Pins — right (33–48) */}
           {Array.from({length:16},(_,i)=>(
-            <rect key={i} x={8+i*9.8} y={165} width={6} height={9}
-              fill={i===7||i===8?"rgba(6,182,212,0.7)":"rgba(184,115,51,0.42)"} rx="0.5"
-              className={i===7?"pin-sck":i===8?"pin-can":undefined}/>
+            <g key={i}>
+              <rect x={165} y={8+i*9.8} width={10} height={6}
+                fill="rgba(184,115,51,0.45)" rx="0.5"/>
+              {i%4===0&&<text x={178} y={8+i*9.8+5} fill="rgba(255,255,255,0.1)"
+                fontSize="4.5" fontFamily="monospace">{33+i}</text>}
+            </g>
           ))}
-          {/* Left pins */}
-          {Array.from({length:16},(_,i)=>(
-            <rect key={i} x={-9} y={8+i*9.8} width={9} height={6} fill="rgba(184,115,51,0.42)" rx="0.5"/>
+
+          {/* Thermal via array */}
+          {[[58,126],[70,126],[82,126],[58,138],[70,138],[82,138]].map(([x,y],i)=>(
+            <circle key={i} cx={x} cy={y} r="2.8"
+              fill="rgba(184,115,51,0.22)" stroke="rgba(184,115,51,0.4)" strokeWidth="0.5"/>
           ))}
-          {/* Right pins */}
-          {Array.from({length:16},(_,i)=>(
-            <rect key={i} x={165} y={8+i*9.8} width={9} height={6} fill="rgba(184,115,51,0.42)" rx="0.5"/>
-          ))}
-          {/* Thermal vias */}
-          {[[62,132],[74,132],[86,132],[62,144],[74,144],[86,144]].map(([x,y],i)=>(
-            <circle key={i} cx={x} cy={y} r="2.5" fill="rgba(184,115,51,0.25)" stroke="rgba(184,115,51,0.4)" strokeWidth="0.5"/>
-          ))}
-          <text x="82" y="-15" fill="rgba(255,255,255,0.12)" fontSize="11" fontFamily="monospace" textAnchor="middle" fontWeight="bold">U1</text>
-          <circle cx="8" cy="0" r="3.5" fill="rgba(255,255,255,0.18)"/>
-          {/* UART pin labels */}
-          <text x={8+3*9.8+3} y={-14} fill="rgba(6,182,212,0.35)" fontSize="5" fontFamily="monospace" textAnchor="middle">TX</text>
-          <text x={8+4*9.8+3} y={-14} fill="rgba(6,182,212,0.35)" fontSize="5" fontFamily="monospace" textAnchor="middle">RX</text>
         </g>
 
-        {/* ── ESP32-C3 WROOM MODULE ── */}
+        {/* ── ESP32-C3 WROOM-02 MODULE ── */}
         <g transform="translate(1090,312)">
           {/* Glow border */}
           <rect x="-4" y="-4" width="133" height="108"
             fill="none" stroke="rgba(6,182,212,0.55)" strokeWidth="1.5" className="ic-u2-glow"/>
-          <rect width="125" height="100" fill="rgba(12,22,12,0.9)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-          {/* Antenna cutout */}
-          <rect x="100" y="8" width="22" height="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5"/>
-          {/* Antenna trace animated */}
-          <path d="M 110 12 L 116 12 L 116 44 L 110 44" fill="none"
-            stroke="rgba(6,182,212,0.4)" strokeWidth="1" className="ic-u2-glow"/>
-          <text x="58" y="42" fill="rgba(6,182,212,0.4)" fontSize="9" fontFamily="monospace" textAnchor="middle" className="label-scan"
-            style={{fill:"rgba(6,182,212,0.4)"}}>ESP32-C3</text>
-          <text x="58" y="55" fill="rgba(255,255,255,0.07)" fontSize="7" fontFamily="monospace" textAnchor="middle">WROOM-02 · Wi-Fi+BT</text>
-          {/* Activity dots */}
+
+          {/* Module shield */}
+          <rect width="125" height="100"
+            fill="rgba(10,18,10,0.96)" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
+
+          {/* Metal shield texture (crosshatch) */}
+          {[20,35,50,65,80,95].map(x=>(
+            <line key={x} x1={x} y1="0" x2={x} y2="100"
+              stroke="rgba(255,255,255,0.02)" strokeWidth="0.5"/>
+          ))}
+          {[20,35,50,65,80].map(y=>(
+            <line key={y} x1="0" y1={y} x2="100" y2={y}
+              stroke="rgba(255,255,255,0.02)" strokeWidth="0.5"/>
+          ))}
+
+          {/* Antenna cutout (PCB trace antenna) */}
+          <rect x="98" y="6" width="24" height="52"
+            fill="rgba(6,182,212,0.03)" stroke="rgba(6,182,212,0.2)" strokeWidth="0.6"/>
+          {/* Antenna meander trace */}
+          <path d="M 103 12 L 117 12 L 117 20 L 103 20 L 103 28 L 117 28 L 117 36 L 103 36 L 103 44 L 117 44"
+            fill="none" stroke="rgba(6,182,212,0.45)" strokeWidth="1" className="ic-u2-glow"/>
+          <text x="110" y="56" fill="rgba(6,182,212,0.2)" fontSize="4"
+            fontFamily="monospace" textAnchor="middle">ANT</text>
+
+          {/* Die floorplan inside module */}
+          {/* RISC-V core */}
+          <rect x="8" y="10" width="50" height="18" rx="1"
+            fill="rgba(6,182,212,0.06)" stroke="rgba(6,182,212,0.25)" strokeWidth="0.6"/>
+          <text x="33" y="19" fill="rgba(6,182,212,0.5)" fontSize="5.5"
+            fontFamily="monospace" textAnchor="middle" className="label-scan">RISC-V · 160MHz</text>
+          <text x="33" y="25" fill="rgba(255,255,255,0.1)" fontSize="4"
+            fontFamily="monospace" textAnchor="middle">ESP32-C3 · 2.4GHz</text>
+
+          {/* Bus */}
+          <line x1="8" y1="33" x2="88" y2="33"
+            stroke="rgba(6,182,212,0.15)" strokeWidth="0.6"/>
+
+          {/* Blocks row */}
+          {[
+            {x:8,  w:22, label:"Wi-Fi", sub:"802.11b/g/n"},
+            {x:33, w:20, label:"BLE",   sub:"5.0"},
+            {x:56, w:18, label:"4MB",   sub:"Flash"},
+            {x:77, w:14, label:"400K",  sub:"SRAM"},
+          ].map(({x,w,label,sub},i)=>(
+            <g key={i}>
+              <rect x={x} y={36} width={w} height={18} rx="1"
+                fill="rgba(6,182,212,0.04)" stroke="rgba(6,182,212,0.15)" strokeWidth="0.5"
+                style={{animation:`pin-flash ${1.8+i*0.5}s ease-in-out infinite ${i*0.25}s`}}/>
+              <text x={x+w/2} y={44} fill="rgba(6,182,212,0.38)" fontSize="5"
+                fontFamily="monospace" textAnchor="middle">{label}</text>
+              <text x={x+w/2} y={50} fill="rgba(255,255,255,0.09)" fontSize="3.5"
+                fontFamily="monospace" textAnchor="middle">{sub}</text>
+            </g>
+          ))}
+
+          {/* GPIO strip */}
+          <rect x="8" y="58" width="83" height="10" rx="1"
+            fill="rgba(6,182,212,0.03)" stroke="rgba(6,182,212,0.10)" strokeWidth="0.5"/>
+          <text x="50" y="65" fill="rgba(6,182,212,0.2)" fontSize="5"
+            fontFamily="monospace" textAnchor="middle">GPIO · SPI · UART · I2C · ADC</text>
+
+          {/* Activity LEDs (Tx/Rx indicators) */}
           {[0,1,2].map(i=>(
-            <circle key={i} cx={22+i*18} cy={72} r="3" fill="rgba(6,182,212,0.15)"
-              stroke="rgba(6,182,212,0.5)" strokeWidth="0.5"
-              style={{animation:`pin-flash ${1.5+i*0.5}s ease-in-out infinite ${i*0.3}s`}}/>
+            <circle key={i} cx={18+i*16} cy={80} r="3.5"
+              fill="rgba(6,182,212,0.12)" stroke="rgba(6,182,212,0.5)" strokeWidth="0.6"
+              style={{animation:`pin-flash ${1.4+i*0.6}s ease-in-out infinite ${i*0.3}s`}}/>
           ))}
-          {Array.from({length:9},(_,i)=>(
-            <rect key={i} x={-8} y={8+i*9} width={8} height={5}
-              fill={i===2?"rgba(6,182,212,0.65)":"rgba(184,115,51,0.42)"} rx="0.5"
-              className={i===2?"pin-rx":undefined}/>
-          ))}
-          {Array.from({length:9},(_,i)=>(
-            <rect key={i} x={125} y={8+i*9} width={8} height={5}
-              fill={i===2?"rgba(6,182,212,0.65)":"rgba(184,115,51,0.42)"} rx="0.5"
-              className={i===2?"pin-tx":undefined}/>
-          ))}
-          <text x="58" y="-11" fill="rgba(255,255,255,0.12)" fontSize="11" fontFamily="monospace" textAnchor="middle" fontWeight="bold">U2</text>
+          <text x="18" y="88" fill="rgba(6,182,212,0.25)" fontSize="4" fontFamily="monospace" textAnchor="middle">TX</text>
+          <text x="34" y="88" fill="rgba(6,182,212,0.25)" fontSize="4" fontFamily="monospace" textAnchor="middle">RX</text>
+          <text x="50" y="88" fill="rgba(6,182,212,0.2)"  fontSize="4" fontFamily="monospace" textAnchor="middle">STA</text>
+
+          {/* Espressif wordmark */}
+          <text x="72" y="87" fill="rgba(255,255,255,0.08)" fontSize="6"
+            fontFamily="monospace" fontStyle="italic">espressif</text>
+
+          {/* Silkscreen */}
+          <text x="62" y="-13" fill="rgba(255,255,255,0.14)" fontSize="11"
+            fontFamily="monospace" textAnchor="middle" fontWeight="bold">U2</text>
+          <text x="62" y="-4" fill="rgba(255,255,255,0.16)" fontSize="6.5"
+            fontFamily="monospace" textAnchor="middle">ESP32-C3-MINI-1</text>
+          <text x="10" y="98" fill="rgba(255,255,255,0.05)" fontSize="5"
+            fontFamily="monospace">2309  FCC ID: 2AC7Z</text>
+
+          {/* Left pins with labels */}
+          {Array.from({length:9},(_,i)=>{
+            const active = i===2
+            return (
+              <g key={i}>
+                <rect x={-10} y={8+i*9} width={10} height={5}
+                  fill={active?"rgba(6,182,212,0.65)":"rgba(184,115,51,0.42)"} rx="0.5"
+                  className={active?"pin-rx":undefined}/>
+                <text x={-13} y={8+i*9+4.5} fill="rgba(255,255,255,0.1)"
+                  fontSize="4.5" fontFamily="monospace" textAnchor="end">{i+1}</text>
+              </g>
+            )
+          })}
+          <text x={-13} y={8+2*9+4.5} fill="rgba(6,182,212,0.4)" fontSize="4.5" fontFamily="monospace" textAnchor="end">RX</text>
+
+          {/* Right pins with labels */}
+          {Array.from({length:9},(_,i)=>{
+            const active = i===2
+            return (
+              <g key={i}>
+                <rect x={125} y={8+i*9} width={10} height={5}
+                  fill={active?"rgba(6,182,212,0.65)":"rgba(184,115,51,0.42)"} rx="0.5"
+                  className={active?"pin-tx":undefined}/>
+                <text x={138} y={8+i*9+4.5} fill="rgba(255,255,255,0.1)"
+                  fontSize="4.5" fontFamily="monospace">{10+i}</text>
+              </g>
+            )
+          })}
+          <text x={138} y={8+2*9+4.5} fill="rgba(6,182,212,0.4)" fontSize="4.5" fontFamily="monospace">TX</text>
         </g>
 
         {/* ── CRYSTAL Y1 ── */}
