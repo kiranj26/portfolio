@@ -3,31 +3,30 @@
 import { useEffect, useState } from "react"
 
 // 16×2 HD44780-style character LCD
-// Line 1: static board label
-// Line 2: cycles through firmware terms with typing effect
+// Both lines cycle together as paired "screens" — like a real embedded device
 
-const LINE1 = "KJ-DEV-BOARD v2 "   // exactly 16 chars
-
-const LINES2 = [
-  "ASIL-D ISO 26262",   // automotive safety
-  "CAN / CAN-FD 8MB",   // protocol with CAN FD upgrade
-  "FreeRTOS v10 DMA",   // RTOS + DMA
-  "OCPP 1.6 EV chrg",   // EV charging protocol
-  "UART/SPI/I2C/USB",   // peripheral bus stack
-  "IRQ < 1us CM4F  ",   // latency + core
-  "JTAG/SWD bare-C ",   // debug + language
-  "LQFP64 SMD 0402 ",   // package knowledge
+// Each entry: [line1 (16 chars), line2 (16 chars)]
+const SCREENS: [string, string][] = [
+  ["ISO 26262 ASIL-D", "Auto Safety Cert"],
+  ["CAN / CAN-FD    ", "500k to 8 Mbps  "],
+  ["FreeRTOS v10.5  ", "DMA + 16 tasks  "],
+  ["OCPP 1.6 / J1772", "EV Charge Ctrl  "],
+  ["UART SPI I2C USB", "Peripheral Stack"],
+  ["JTAG / SWD Debug", "Cortex-M4F 180M "],
+  ["IRQ Latency     ", "< 1 microsecond "],
+  ["10+ Silicon Fams", "STM32 ESP C2000 "],
 ]
 
-const CHAR_MS  = 55   // typing speed per character
-const HOLD_MS  = 2200 // how long to hold before next word
-const CLEAR_MS = 20   // speed to clear line before re-typing
+const CHAR_MS  = 42   // typing speed per character
+const HOLD_MS  = 2000 // hold after both lines fully typed
+const CLEAR_MS = 18   // clear speed before next screen
 
 export function LcdDisplay({ className }: { className?: string }): React.ReactElement {
-  const [lineIdx,  setLineIdx]  = useState(0)
-  const [typed,    setTyped]    = useState("")
-  const [cursor,   setCursor]   = useState(true)
-  const [clearing, setClearing] = useState(false)
+  const [screenIdx, setScreenIdx] = useState(0)
+  const [typedL1,   setTypedL1]   = useState("")
+  const [typedL2,   setTypedL2]   = useState("")
+  const [cursor,    setCursor]     = useState(true)
+  const [clearing,  setClearing]   = useState(false)
 
   // Blinking cursor
   useEffect(() => {
@@ -35,17 +34,24 @@ export function LcdDisplay({ className }: { className?: string }): React.ReactEl
     return () => clearInterval(id)
   }, [])
 
-  // Typing / clearing cycle
+  // Two-line typing / clearing cycle
   useEffect(() => {
     let stopped = false
 
     async function run() {
-      const target = LINES2[lineIdx]
+      const [t1, t2] = SCREENS[screenIdx]
 
-      // Type characters one by one
-      for (let i = 0; i <= target.length; i++) {
+      // Type line 1
+      for (let i = 0; i <= t1.length; i++) {
         if (stopped) return
-        setTyped(target.slice(0, i))
+        setTypedL1(t1.slice(0, i))
+        await delay(CHAR_MS)
+      }
+
+      // Type line 2
+      for (let i = 0; i <= t2.length; i++) {
+        if (stopped) return
+        setTypedL2(t2.slice(0, i))
         await delay(CHAR_MS)
       }
 
@@ -53,24 +59,29 @@ export function LcdDisplay({ className }: { className?: string }): React.ReactEl
       await delay(HOLD_MS)
       if (stopped) return
 
-      // Clear characters one by one
+      // Clear line 2 then line 1
       setClearing(true)
-      for (let i = target.length; i >= 0; i--) {
+      for (let i = t2.length; i >= 0; i--) {
         if (stopped) return
-        setTyped(target.slice(0, i))
+        setTypedL2(t2.slice(0, i))
+        await delay(CLEAR_MS)
+      }
+      for (let i = t1.length; i >= 0; i--) {
+        if (stopped) return
+        setTypedL1(t1.slice(0, i))
         await delay(CLEAR_MS)
       }
       setClearing(false)
 
-      if (!stopped) setLineIdx(idx => (idx + 1) % LINES2.length)
+      if (!stopped) setScreenIdx(idx => (idx + 1) % SCREENS.length)
     }
 
     run()
     return () => { stopped = true }
-  }, [lineIdx])
+  }, [screenIdx])
 
-  // Pad typed text to 16 chars for stable layout
-  const line2 = typed.padEnd(16, " ")
+  const line1 = typedL1.padEnd(16, " ")
+  const line2 = typedL2.padEnd(16, " ")
 
   return (
     <div className={className} style={{ display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
@@ -138,7 +149,7 @@ export function LcdDisplay({ className }: { className?: string }): React.ReactEl
             borderRadius: 4,
           }}/>
 
-          {/* ── Line 1 — static label ── */}
+          {/* ── Line 1 ── */}
           <div style={{
             fontFamily:    "'Courier New', Courier, monospace",
             fontSize:      15,
@@ -150,10 +161,19 @@ export function LcdDisplay({ className }: { className?: string }): React.ReactEl
             position:      "relative",
             textShadow:    "0 1px 0 rgba(180,220,0,0.25)",
           }}>
-            {LINE1}
+            {line1.slice(0, 15)}
+            <span style={{
+              display:       "inline-block",
+              width:         "0.55em",
+              height:        "1em",
+              background:    cursor && typedL2 === "" && !clearing ? "rgba(10,25,0,0.80)" : "transparent",
+              verticalAlign: "text-bottom",
+              marginLeft:    "0.02em",
+              transition:    "background 0.05s",
+            }}/>
           </div>
 
-          {/* ── Line 2 — typing ── */}
+          {/* ── Line 2 ── */}
           <div style={{
             fontFamily:    "'Courier New', Courier, monospace",
             fontSize:      15,
@@ -165,15 +185,14 @@ export function LcdDisplay({ className }: { className?: string }): React.ReactEl
             position:      "relative",
           }}>
             {line2.slice(0, 15)}
-            {/* blinking block cursor */}
             <span style={{
-              display:         "inline-block",
-              width:           "0.55em",
-              height:          "1em",
-              background:      cursor && !clearing ? "rgba(10,25,0,0.80)" : "transparent",
-              verticalAlign:   "text-bottom",
-              marginLeft:      "0.02em",
-              transition:      "background 0.05s",
+              display:       "inline-block",
+              width:         "0.55em",
+              height:        "1em",
+              background:    cursor && typedL2.length > 0 && !clearing ? "rgba(10,25,0,0.80)" : "transparent",
+              verticalAlign: "text-bottom",
+              marginLeft:    "0.02em",
+              transition:    "background 0.05s",
             }}/>
           </div>
         </div>
