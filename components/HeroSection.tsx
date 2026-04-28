@@ -42,8 +42,8 @@ function EStopButton({ onPress, disabled }: { onPress: () => void; disabled: boo
       <div
         className="relative cursor-pointer"
         style={{
-          width: 110,
-          height: 110,
+          width: 56,
+          height: 56,
           borderRadius: "50%",
           background: "linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)",
           border: "3px solid #3a3a3a",
@@ -73,7 +73,7 @@ function EStopButton({ onPress, disabled }: { onPress: () => void; disabled: boo
 
         {/* Red cap */}
         <div
-          className="absolute inset-0 m-2 rounded-full flex flex-col items-center justify-center"
+          className="absolute inset-0 m-1 rounded-full flex flex-col items-center justify-center"
           style={{
             background: pressed
               ? "radial-gradient(circle at 40% 35%, #b91c1c 0%, #7f1d1d 100%)"
@@ -84,7 +84,7 @@ function EStopButton({ onPress, disabled }: { onPress: () => void; disabled: boo
             transition: "background 80ms ease, box-shadow 80ms ease",
           }}
         >
-          <span className="font-mono text-white font-bold text-[10px] tracking-widest leading-tight text-center">
+          <span className="font-mono text-white font-bold text-[7px] tracking-widest leading-tight text-center">
             FLASH<br/>FW
           </span>
         </div>

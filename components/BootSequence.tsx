@@ -176,17 +176,21 @@ export function BootSequence({ onComplete }: BootSequenceProps): React.ReactElem
   useEffect(() => {
     if (phase !== "dumping") return
     let idx = 0
+    let stopped = false
     const tick = (): void => {
+      if (stopped) return
       if (idx >= CRASH_LINES.length) {
-        setTimeout(() => setReboot(3), 1500)
+        setTimeout(() => { if (!stopped) setReboot(3) }, 1500)
         return
       }
-      setDumpLines(prev => [...prev, CRASH_LINES[idx]])
+      const line = CRASH_LINES[idx]
+      if (line) setDumpLines(prev => [...prev, line])
       if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
       idx++
       setTimeout(tick, idx < 10 ? 80 : 110)
     }
-    setTimeout(tick, 300)
+    const id = setTimeout(tick, 300)
+    return () => { stopped = true; clearTimeout(id) }
   }, [phase])
 
   // ── Phase 4: reboot countdown ─────────────────────────────────────────────
@@ -195,8 +199,8 @@ export function BootSequence({ onComplete }: BootSequenceProps): React.ReactElem
     if (reboot === 0) {
       speak("Rebooting. Welcome back.", { rate: 0.85, pitch: 0.4 })
       setOpacity(0)
-      setTimeout(onComplete, 600)
-      return
+      const id = setTimeout(() => { onComplete() }, 700)
+      return () => clearTimeout(id)
     }
     const id = setTimeout(() => setReboot(r => (r ?? 1) - 1), 1000)
     return () => clearTimeout(id)
@@ -302,7 +306,7 @@ export function BootSequence({ onComplete }: BootSequenceProps): React.ReactElem
           {/* ── Dump phase ── */}
           {isDumping && (
             <div>
-              {dumpLines.map((line, i) => (
+              {dumpLines.filter(Boolean).map((line, i) => (
                 <div key={i} className="whitespace-pre" style={{ color: line.color }}>
                   {line.text}
                 </div>
